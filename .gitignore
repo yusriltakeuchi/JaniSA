@@ -1,6 +1,6 @@
-build/
 *.elf
 *.nacp
+*.lst
 *.o
 *.d
 *.map
