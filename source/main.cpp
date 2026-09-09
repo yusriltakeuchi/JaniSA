@@ -154,8 +154,8 @@ public:
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < cat.count; i++) {
             auto item = new tsl::elm::ListItem(cat.items[i].name);
-            item->setClickListener([this, i](u64){
-                if (gGuard.active()) return false;   // swallow ghost A from Tesla
+            item->setClickListener([this, i](u64 keys){
+                if (!(keys & HidNpadButton_A)) return false;   // only A activates
                 gInjector.start(&CATEGORIES[m_cat].items[i]);
                 return true;
             });
@@ -193,8 +193,8 @@ public:
         }
 
         auto confirm = new tsl::elm::ListItem("Confirm ▶");
-        confirm->setClickListener([order](u64){
-            if (gGuard.active()) return false;   // swallow ghost A
+        confirm->setClickListener([order](u64 keys){
+            if (!(keys & HidNpadButton_A)) return false;   // only A activates
             if (!order.empty()) gInjector.startSequence(order);   // run ALL, no toggles
             return true;
         });
@@ -220,7 +220,7 @@ public:
         for (u32 i = 0; i < BUNDLE_COUNT; i++) {
             auto item = new tsl::elm::ListItem(BUNDLES[i].title);
             item->setValue(BUNDLES[i].desc);
-            item->setClickListener([i](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
+            item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
             list->addItem(item);
         }
         frame->setContent(list);
@@ -241,14 +241,14 @@ public:
         // Bundling entry at top of root menu
         auto b = new tsl::elm::ListItem("Bundling");
         b->setValue("run several cheats at once");
-        b->setClickListener([](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiBundles>(); return true; });
+        b->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundles>(); return true; });
         list->addItem(b);
 
         for (int i = 0; i < CATEGORY_COUNT; i++) {
             auto item = new tsl::elm::ListItem(CATEGORIES[i].title);
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", CATEGORIES[i].count);
             item->setValue(sub);
-            item->setClickListener([i](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiCheats>(i); return true; });
+            item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiCheats>(i); return true; });
             list->addItem(item);
         }
         frame->setContent(list);
