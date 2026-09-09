@@ -41,6 +41,9 @@ struct Injector {
     u8 workBuffer[0x4000] alignas(0x1000);  // HDLS transfer memory (16KB)
     bool attached = false;
     Thread m_thread = {};
+    std::atomic<bool> m_busy{false};        // a run is in-flight
+    std::atomic<bool> m_scheduleClose{false}; // bg thread finished -> UI closes overlay
+    Mutex m_queueLock = {};                 // protects queue/qIndex
 
     // per-button timing (ms) — GTA DE needs ~50ms+ to register a press
     static constexpr u64 HOLD_NS = 60ULL * 1'000'000ULL;        // 60ms hold
@@ -63,23 +66,54 @@ struct Injector {
     }
 
     void exit() {
+        // cancel any in-flight run and wait for the bg thread to finish
+        // BEFORE releasing hid:dbg — otherwise the thread may call
+        // hiddbgSetHdlsState on a torn-down session (use-after-free).
+        if (m_busy.load()) {
+            cancel();
+            if (m_thread.handle != 0) {
+                threadWaitForExit(&m_thread);
+                threadClose(&m_thread);
+                m_thread = {};
+            }
+        }
         if (!attached) return;
         hiddbgDetachHdlsVirtualDevice(handle);
         hiddbgReleaseHdlsWorkBuffer(session);
         attached = false;
     }
 
+    void cancel() {
+        // best-effort: stop the current playback by releasing buttons
+        if (attached) setButtons(0);
+        m_busy = false;   // bg thread checks this each press
+    }
+
     // Push raw button bitmask to the HDLS virtual pad.
+    // NOTE: firmware masks buttons internally (0xfffffffff00fffff) — HOME/Capture
+    // are dropped. HidNpadButton_* layout matches HiddbgHdlsState.buttons.
     void setButtons(u64 mask) {
+        if (!attached) return;
         HiddbgHdlsState state = {};
         state.flags = 0b11;            // powered + charging
         state.battery_level = 4;       // full battery
-        state.buttons = mask & 0xfffffffff00fffffULL;
+        state.buttons = mask;          // firmware applies the mask
         hiddbgSetHdlsState(handle, &state);
     }
 
+    bool isBusy() const { return m_busy.load(); }
+    bool shouldClose() { return m_scheduleClose.exchange(false); }
+
+    // UI thread: called every frame. Executes the pending close on the UI thread
+    // (never call Overlay::close() from the bg thread — it touches the renderer).
+    void tick() {
+        if (shouldClose()) tsl::Overlay::get()->close();
+    }
+
+private:
     void playCheat(const CheatEntry* c) {
         for (u32 i = 0; i < c->len; i++) {
+            if (!m_busy.load()) return;   // cancelled
             setButtons(c->combo[i]);
             svcSleepThread(HOLD_NS);
             setButtons(0);
@@ -90,27 +124,48 @@ struct Injector {
     void runSync() {
         // give the overlay a moment to actually disappear before injecting
         svcSleepThread(300ULL * 1'000'000ULL);
-        if (!init()) { tsl::Overlay::get()->close(); return; }
-        for (size_t i = 0; i < queue.size(); i++) {
-            playCheat(queue[i]);
-            if (i + 1 < queue.size()) svcSleepThread(BETWEEN_CHEATS_NS);
-        }
-        setButtons(0);
-        // done — close the overlay so the game is fully in control again
-        tsl::Overlay::get()->close();
-    }
+        if (!m_busy.load() || !init()) { m_busy = false; m_scheduleClose = true; return; }
 
-    // Called from the UI thread: hide overlay, then play on a background thread.
-    void start(const CheatEntry* c) { queue.clear(); queue.push_back(c); launch(); }
-    void startSequence(const std::vector<const CheatEntry*>& seq) { queue = seq; qIndex = 0; launch(); }
+        mutexLock(&m_queueLock);
+        std::vector<const CheatEntry*> snapshot = queue;
+        mutexUnlock(&m_queueLock);
+
+        for (size_t i = 0; i < snapshot.size() && m_busy.load(); i++) {
+            playCheat(snapshot[i]);
+            if (i + 1 < snapshot.size() && m_busy.load()) svcSleepThread(BETWEEN_CHEATS_NS);
+        }
+        if (attached) setButtons(0);
+        m_busy = false;
+        m_scheduleClose = true;   // UI thread closes the overlay
+    }
 
     static void threadEntry(void* arg) {
         static_cast<Injector*>(arg)->runSync();
     }
+
     void launch() {
-        if (!queue.empty()) tsl::Overlay::get()->hide();   // critical: hide BEFORE injecting
+        if (m_busy.load()) return;   // already injecting — ignore duplicate tap
+        m_busy = true;
+        tsl::Overlay::get()->hide();   // critical: hide BEFORE injecting
         threadCreate(&m_thread, threadEntry, this, nullptr, 0x4000, 0x2c, -2);
         threadStart(&m_thread);
+    }
+
+public:
+    // Called from the UI thread (click listeners): set the work, then launch.
+    void start(const CheatEntry* c) {
+        if (m_busy.load()) return;
+        mutexLock(&m_queueLock);
+        queue.clear(); queue.push_back(c);
+        mutexUnlock(&m_queueLock);
+        launch();
+    }
+    void startSequence(const std::vector<const CheatEntry*>& seq) {
+        if (m_busy.load()) return;
+        mutexLock(&m_queueLock);
+        queue = seq;
+        mutexUnlock(&m_queueLock);
+        launch();
     }
 };
 static Injector gInjector;
@@ -139,7 +194,7 @@ static InputGuard gGuard;
 class GuardedGui : public tsl::Gui {
 public:
     virtual void update() override {
-        // injection now runs on a background thread — nothing to tick per-frame
+        gInjector.tick();   // UI thread: close overlay when bg inject finishes
     }
     virtual bool handleInput(u64 keysDown, u64 keysHeld,
         const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
