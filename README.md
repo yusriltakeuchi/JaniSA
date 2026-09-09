@@ -11,6 +11,7 @@ Buka overlay pas lagi main → pilih cheat dari 7 kategori → kombo tombol ke-i
 
 - **82 cheat** resmi GTA SA DE (data dari IGN wiki, tombol versi Switch)
 - 7 kategori biar gampang dicari: Player & Wanted, Combat & Peds, Vehicles, Traffic & Driving, Time & Physics, Weather, Other
+- **Bundling** — jalanin beberapa cheat sekaligus berurutan (misal money + armor + weapon)
 - Kombo tombol ke-inject **otomatis** (frame-accurate) — gak perlu pencet manual
 - Background hitam semi-transparan; navigasi D-pad, A pilih, B balik
 - Kecil: `.ovl` cuma **~300 KB**
@@ -46,7 +47,8 @@ Kalau Tesla belom terpasang: install dulu lewat [The Ultimate AIO Switch Updater
 4. Menu Tesla muncul → pilih **GTA Cheats** overlay
 5. Pilih **kategori** (misal *Weapons* atau *Player & Wanted*)
 6. Pilih **cheat** → kombo tombol ke-inject otomatis, cheat langsung aktif
-7. Tekan **`B`** buat tutup menu (atau kombo Tesla lagi)
+7. **Bundling** (opsional): pilih *Bundling* di menu utama → pilih bundle → liat list cheat-nya → **Confirm ▶** → semua cheat di bundle ke-inject berurutan
+8. Tekan **`B`** buat tutup menu (atau kombo Tesla lagi)
 
 > **Catatan penting:** Injection pakai service `hid:dbg`. Pada beberapa setup Atmosphere
 > applet overlay gak dapat akses service ini. Kalau cheat gak ke-inject (game gak ngerespon),
@@ -89,6 +91,7 @@ Hasil: `gta-cheats.ovl` di root project.
 source/
   main.cpp              — overlay UI + injector (hid:dbg)
   gta_cheats_data.hpp   — 82 cheat & kombo (auto-generated, jangan diedit manual)
+  gta_bundles_data.hpp  — definisi bundle multi-cheat
 libs/libtesla/          — framework overlay (submodule)
 Makefile
 ```
