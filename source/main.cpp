@@ -19,9 +19,21 @@
 #include <tesla.hpp>
 #include "gta_cheats_data.hpp"
 #include "gta_bundles_data.hpp"
+#include "gta_config.hpp"
 
 #include <vector>
 #include <cstdio>
+
+// ---------------------------------------------------------------------------
+// Custom bundle state — loaded from config on boot, edited via GuiBundleEditor,
+// injected as "Bundle E (Custom)" from the Bundling menu.
+// ---------------------------------------------------------------------------
+struct CustomBundle {
+    // line[0] = title, line[1..] = cheat names
+    std::vector<std::string> lines;
+    bool dirty = false;   // needs re-save on next edit
+};
+static CustomBundle gCustom;
 
 // ---------------------------------------------------------------------------
 // Injector — plays cheat combos through the hid:dbg HDLS virtual pad.
@@ -276,6 +288,7 @@ private:
 // ---------------------------------------------------------------------------
 // Gui: bundle list (root-level Bundling entry)
 // ---------------------------------------------------------------------------
+class GuiBundleEditor;   // forward decl (referenced from GuiBundles below)
 class GuiBundles : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
@@ -288,8 +301,104 @@ public:
             item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
             list->addItem(item);
         }
+
+        // Bundle E — user-defined custom bundle (only if non-empty)
+        if (gCustom.lines.size() > 1) {   // title + at least 1 cheat
+            auto item = new tsl::elm::ListItem("Custom");
+            char sub[32]; snprintf(sub, sizeof sub, "%u cheats", (unsigned)(gCustom.lines.size() - 1));
+            item->setValue(sub);
+            // build a fake bundle descriptor from the loaded names, inject in order
+            item->setClickListener([](u64 keys){
+                if (!(keys & HidNpadButton_A)) return false;
+                std::vector<const CheatEntry*> order;
+                for (size_t i = 1; i < gCustom.lines.size(); i++)
+                    if (const CheatEntry* c = findCheat(gCustom.lines[i].c_str())) order.push_back(c);
+                if (!order.empty()) gInjector.startSequence(order);
+                return true;
+            });
+            list->addItem(item);
+        }
+
+        // Edit custom bundle
+        auto edit = new tsl::elm::ListItem("Edit Custom Bundle");
+        edit->setValue("pick cheats");
+        edit->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleEditor>(); return true; });
+        list->addItem(edit);
+
         frame->setContent(list);
         return frame;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Gui: custom bundle editor — pick cheats across all categories, Save persists.
+// ---------------------------------------------------------------------------
+class GuiBundleEditor : public GuardedGui {
+public:
+    virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
+        auto frame = new tsl::elm::OverlayFrame("Edit Custom Bundle", "A toggles · Save to keep");
+        auto list  = new tsl::elm::List();
+
+        // Flat list of all cheats across all categories, with selection state
+        std::vector<const CheatEntry*> all;
+        for (int c = 0; c < CATEGORY_COUNT; c++)
+            for (u32 i = 0; i < CATEGORIES[c].count; i++)
+                all.push_back(&CATEGORIES[c].items[i]);
+
+        // m_selected mirrors gCustom.lines[1..] at load
+        generateSelection();
+
+        for (size_t i = 0; i < all.size(); i++) {
+            auto item = new tsl::elm::ListItem(all[i]->name);
+            bool sel = isSelected(all[i]->name);
+            item->setValue(sel ? "✓" : "");
+            item->setClickListener([this, all, i, item](u64 keys){
+                if (!(keys & HidNpadButton_A)) return false;
+                toggle(all[i]->name);
+                item->setValue(isSelected(all[i]->name) ? "✓" : "");
+                return true;
+            });
+            list->addItem(item);
+        }
+
+        auto save = new tsl::elm::ListItem("Save Bundle ▶");
+        save->setClickListener([this](u64 keys){
+            if (!(keys & HidNpadButton_A)) return false;
+            saveSelected();
+            return true;
+        });
+        list->addItem(save);
+
+        frame->setContent(list);
+        return frame;
+    }
+
+private:
+    std::vector<std::string> m_selected;
+
+    void generateSelection() {
+        m_selected.clear();
+        for (size_t i = 1; i < gCustom.lines.size(); i++)
+            m_selected.push_back(gCustom.lines[i]);
+    }
+    bool isSelected(const char* name) const {
+        for (const auto& s : m_selected) if (s == name) return true;
+        return false;
+    }
+    void toggle(const char* name) {
+        for (size_t i = 0; i < m_selected.size(); i++)
+            if (m_selected[i] == name) { m_selected.erase(m_selected.begin() + i); return; }
+        if (m_selected.size() < janisaConfig::MAX_CUSTOM_CHEATS) m_selected.push_back(name);
+    }
+    void saveSelected() {
+        std::vector<std::string> lines;
+        lines.push_back("Custom");   // bundle title
+        for (const auto& s : m_selected) lines.push_back(s);
+        janisaConfig::saveCustomBundle(lines);
+        gCustom.lines = lines;
+        gCustom.dirty = false;
+        tsl::changeTo<GuiBundles>();
     }
 };
 
@@ -327,6 +436,8 @@ public:
     virtual void initServices() override {
         // hid:dbg needed for injector
         hiddbgInitialize();
+        // load user-defined bundle from SD config
+        gCustom.lines = janisaConfig::loadCustomBundle();
     }
     virtual void exitServices() override {
         gInjector.exit();   // detach HDLS virtual pad + release buffer
