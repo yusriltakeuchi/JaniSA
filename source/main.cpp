@@ -24,25 +24,28 @@
 #include <cstdio>
 
 // ---------------------------------------------------------------------------
-// Injector — frame-accurate combo playback through hid:dbg HDLS virtual pad.
-// HDLS virtual pad IS read by retail games (DebugPad autopilot is NOT — that's
-// why Confirm did nothing). We attach a virtual FullKey (Pro Controller) and
-// push button state via hiddbgSetHdlsState.
-// Supports single cheats AND sequences of cheats (bundles).
+// Injector — plays cheat combos through the hid:dbg HDLS virtual pad.
+// KEY INSIGHT: the injected buttons live in the SAME HID layer Tesla's overlay
+// reads. Most GTA combos start with L / D-pad — the same keys as the Tesla
+// open-combo — so injecting while the overlay is open re-triggers Tesla and the
+// game never sees the input. Fix: hide the overlay FIRST, then play the combo
+// from a background thread using REAL-TIME sleeps (update() stops while hidden,
+// so frame-based ticking cannot drive the injection), then close the overlay.
 // ---------------------------------------------------------------------------
 struct Injector {
-    bool playing = false;
-    std::vector<const CheatEntry*> queue;   // sequence of cheats to play
-    size_t qIndex = 0;                       // current cheat in queue
-    const CheatEntry* cur = nullptr;
-    int idx = 0;
-    int hold = 0;
-    static constexpr int HOLD_FRAMES = 2;   // frames each button is held
+    std::vector<const CheatEntry*> queue;
+    size_t qIndex = 0;
 
     HiddbgHdlsSessionId session = {};
     HiddbgHdlsHandle handle = {};
     u8 workBuffer[0x4000] alignas(0x1000);  // HDLS transfer memory (16KB)
     bool attached = false;
+    Thread m_thread = {};
+
+    // per-button timing (ms) — GTA DE needs ~50ms+ to register a press
+    static constexpr u64 HOLD_NS = 60ULL * 1'000'000ULL;        // 60ms hold
+    static constexpr u64 GAP_NS  = 40ULL * 1'000'000ULL;        // 40ms release gap
+    static constexpr u64 BETWEEN_CHEATS_NS = 400ULL * 1'000'000ULL; // 400ms between bundle cheats
 
     bool init() {
         if (attached) return true;
@@ -54,7 +57,6 @@ struct Injector {
         rc = hiddbgAttachHdlsVirtualDevice(&handle, &info);
         if (R_FAILED(rc)) { hiddbgReleaseHdlsWorkBuffer(session); return false; }
         attached = true;
-        // battery/flags so the pad looks powered-on to the game
         HiddbgHdlsState s = {}; s.flags = 0b11; s.battery_level = 4;
         hiddbgSetHdlsState(handle, &s);
         return true;
@@ -67,40 +69,48 @@ struct Injector {
         attached = false;
     }
 
-    // play a single cheat (existing behavior)
-    void start(const CheatEntry* c) { queue.clear(); queue.push_back(c); begin(); }
-    // play a list of cheats back-to-back (bundles)
-    void startSequence(const std::vector<const CheatEntry*>& seq) { queue = seq; qIndex = 0; begin(); }
-    void begin() {
-        if (queue.empty()) { playing = false; cur = nullptr; return; }
-        if (!init()) { playing = false; cur = nullptr; return; }
-        playing = true; idx = 0; hold = 0; cur = queue[0];
-    }
-    void stop()  { playing = false; cur = nullptr; queue.clear(); }
-    bool active() const { return playing; }
-    size_t remaining() const { return queue.empty() ? 0 : queue.size() - qIndex; }
-
-    // Push raw button bitmask to the HDLS virtual pad (read by retail games).
+    // Push raw button bitmask to the HDLS virtual pad.
     void setButtons(u64 mask) {
         HiddbgHdlsState state = {};
         state.flags = 0b11;            // powered + charging
-        state.battery_level = 4;       // full battery — game ignores pad if low
-        state.buttons = mask & 0xfffffffff00fffffULL;   // mask valid bits
+        state.battery_level = 4;       // full battery
+        state.buttons = mask & 0xfffffffff00fffffULL;
         hiddbgSetHdlsState(handle, &state);
     }
 
-    void tick() {
-        if (!playing || !cur) return;
-        if (hold == 0) setButtons(cur->combo[idx]);
-        if (++hold >= HOLD_FRAMES) {
-            setButtons(0);               // release
-            idx++; hold = 0;
-            if (idx >= (int)cur->len) {  // this cheat done -> next in queue
-                idx = 0; qIndex++;
-                if (qIndex < queue.size()) { cur = queue[qIndex]; }
-                else { setButtons(0); stop(); }
-            }
+    void playCheat(const CheatEntry* c) {
+        for (u32 i = 0; i < c->len; i++) {
+            setButtons(c->combo[i]);
+            svcSleepThread(HOLD_NS);
+            setButtons(0);
+            svcSleepThread(GAP_NS);
         }
+    }
+
+    void runSync() {
+        // give the overlay a moment to actually disappear before injecting
+        svcSleepThread(300ULL * 1'000'000ULL);
+        if (!init()) { tsl::Overlay::get()->close(); return; }
+        for (size_t i = 0; i < queue.size(); i++) {
+            playCheat(queue[i]);
+            if (i + 1 < queue.size()) svcSleepThread(BETWEEN_CHEATS_NS);
+        }
+        setButtons(0);
+        // done — close the overlay so the game is fully in control again
+        tsl::Overlay::get()->close();
+    }
+
+    // Called from the UI thread: hide overlay, then play on a background thread.
+    void start(const CheatEntry* c) { queue.clear(); queue.push_back(c); launch(); }
+    void startSequence(const std::vector<const CheatEntry*>& seq) { queue = seq; qIndex = 0; launch(); }
+
+    static void threadEntry(void* arg) {
+        static_cast<Injector*>(arg)->runSync();
+    }
+    void launch() {
+        if (!queue.empty()) tsl::Overlay::get()->hide();   // critical: hide BEFORE injecting
+        threadCreate(&m_thread, threadEntry, this, nullptr, 0x4000, 0x2c, -2);
+        threadStart(&m_thread);
     }
 };
 static Injector gInjector;
@@ -129,7 +139,7 @@ static InputGuard gGuard;
 class GuardedGui : public tsl::Gui {
 public:
     virtual void update() override {
-        gInjector.tick();
+        // injection now runs on a background thread — nothing to tick per-frame
     }
     virtual bool handleInput(u64 keysDown, u64 keysHeld,
         const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
