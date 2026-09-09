@@ -296,7 +296,8 @@ public:
         auto frame = new tsl::elm::OverlayFrame("Bundling", "multi-cheat");
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < BUNDLE_COUNT; i++) {
-            auto item = new tsl::elm::ListItem(BUNDLES[i].title);
+            char title[96]; snprintf(title, sizeof title, "\u25B6  %s", BUNDLES[i].title);   // ▶ icon
+            auto item = new tsl::elm::ListItem(title);
             item->setValue(BUNDLES[i].desc);
             item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
             list->addItem(item);
@@ -304,7 +305,7 @@ public:
 
         // Bundle E — user-defined custom bundle (only if non-empty)
         if (gCustom.lines.size() > 1) {   // title + at least 1 cheat
-            auto item = new tsl::elm::ListItem("Custom");
+            auto item = new tsl::elm::ListItem("\u25B6  Custom");   // ▶ icon
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", (unsigned)(gCustom.lines.size() - 1));
             item->setValue(sub);
             // build a fake bundle descriptor from the loaded names, inject in order
@@ -320,7 +321,7 @@ public:
         }
 
         // Edit custom bundle
-        auto edit = new tsl::elm::ListItem("Edit Custom Bundle");
+        auto edit = new tsl::elm::ListItem("\u25B6  Edit Custom Bundle");
         edit->setValue("pick cheats");
         edit->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleEditor>(); return true; });
         list->addItem(edit);
@@ -413,13 +414,14 @@ public:
         auto list  = new tsl::elm::List();
 
         // Bundling entry at top of root menu
-        auto b = new tsl::elm::ListItem("Bundling");
-        b->setValue("run several cheats at once");
+        auto b = new tsl::elm::ListItem("\u25B6  Bundling");   // ▶ icon (std font, safe)
+        b->setValue("\u25B6 run several cheats at once");
         b->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundles>(); return true; });
         list->addItem(b);
 
         for (int i = 0; i < CATEGORY_COUNT; i++) {
-            auto item = new tsl::elm::ListItem(CATEGORIES[i].title);
+            char title[96]; snprintf(title, sizeof title, "\u25B6  %s", CATEGORIES[i].title);   // ▶ icon prefix
+            auto item = new tsl::elm::ListItem(title);
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", CATEGORIES[i].count);
             item->setValue(sub);
             item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiCheats>(i); return true; });
