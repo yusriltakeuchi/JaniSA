@@ -14,7 +14,7 @@ APP_TITLE		:=	JaniSA
 APP_AUTHOR		:=	Jani
 APP_VERSION		:=	0.1.0
 
-TARGET			:=	gta-cheats
+TARGET			:=	JaniSA
 BUILD			:=	build
 SOURCES			:=	source
 DATA			:=	data

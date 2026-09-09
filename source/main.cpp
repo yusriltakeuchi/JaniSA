@@ -2,7 +2,7 @@
 //
 // Build: devkitPro toolchain (switch-dev), Tesla-Template layout.
 //   #define TESLA_INIT_IMPL in exactly ONE translation unit.
-// Deploy: <SD>/atmosphere/overlays/gta-cheats.ovl
+// Deploy: <SD>/switch/.overlays/JaniSA.ovl
 //
 // UX: Tesla open-combo (default L+DDOWN) -> category list -> cheat list -> pick -> auto-inject.
 // All 82 cheats, grouped into 7 categories. Data in gta_cheats_data.hpp.
