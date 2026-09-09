@@ -1,9 +1,13 @@
 #pragma once
-// JaniSA user-defined bundle persistence.
-// Stores the custom bundle (list of cheat NAMES) in an INI-style file on SD:
+// JaniSA custom bundle persistence.
+// Multiple user-defined bundles stored in an INI-style file on SD:
 //   sdmc:/config/JaniSA/JaniSA.ini
-// Same pattern as libtesla's own config read/write (fsFsOpenFile on sdmc:).
-// Reserved at most MAX_CUSTOM_CHEATS cheats in the custom bundle.
+// Format:
+//   [Bundle "Name"]
+//   CheatName1
+//   CheatName2
+//   ...
+// Each section = one bundle. Built-in bundles are compile-time (see BUNDLES[]).
 #include <tesla.hpp>   // brings in <switch.h> (Fs*, sdmc devices)
 #include <cstring>
 #include <cstdio>
@@ -15,10 +19,16 @@ namespace janisaConfig {
 static constexpr const char* CONFIG_DIR  = "/config/JaniSA";
 static constexpr const char* CONFIG_FILE = "/config/JaniSA/JaniSA.ini";
 static constexpr const int    MAX_CUSTOM_CHEATS = 16;
+static constexpr const int    MAX_CUSTOM_BUNDLES = 8;
 
-// Load the custom bundle. Returns a vector of cheat names (empty if none/file error).
-static inline std::vector<std::string> loadCustomBundle() {
-    std::vector<std::string> out;
+struct CustomBundleDef {
+    std::string title;
+    std::vector<std::string> cheats;
+};
+
+// Load all custom bundles. Returns empty on file error / no sections.
+static inline std::vector<CustomBundleDef> loadBundles() {
+    std::vector<CustomBundleDef> out;
 
     FsFileSystem fs;
     if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return out;
@@ -36,31 +46,45 @@ static inline std::vector<std::string> loadCustomBundle() {
     if (R_FAILED(fsFileRead(&f, 0, data.data(), (u64)size, FsReadOption_None, &read)) || read != (u64)size)
         return out;
 
-    // parse lines: "Name" one per line (first line is the bundle title, optional)
-    // Format: title on first line, then one cheat name per line.
+    CustomBundleDef cur;
+    bool inSection = false;
     size_t start = 0;
     while (start < data.size()) {
         size_t nl = data.find('\n', start);
         std::string line = data.substr(start, nl == std::string::npos ? std::string::npos : nl - start);
         if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (!line.empty()) out.push_back(line);
+        if (!line.empty()) {
+            if (line.front() == '[' && line.back() == ']') {
+                if (inSection && !cur.title.empty()) out.push_back(cur);
+                cur = CustomBundleDef();
+                cur.title = line.substr(1, line.size() - 2);   // "Bundle \"Name\"" kept verbatim
+                inSection = true;
+            } else if (inSection) {
+                cur.cheats.push_back(line);
+            }
+        }
         if (nl == std::string::npos) break;
         start = nl + 1;
+    }
+    if (inSection && !cur.title.empty()) out.push_back(cur);
+
+    // drop empty sections (title-only)
+    for (size_t i = 0; i < out.size(); ) {
+        if (out[i].cheats.empty()) out.erase(out.begin() + i);
+        else i++;
     }
     return out;
 }
 
-// Save the custom bundle. lines[0] = title, lines[1..] = cheat names.
-static inline bool saveCustomBundle(const std::vector<std::string>& lines) {
+// Save all custom bundles (replaces file contents).
+static inline bool saveBundles(const std::vector<CustomBundleDef>& bundles) {
     FsFileSystem fs;
     if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return false;
     tsl::hlp::ScopeGuard fsGuard([&]{ fsFsClose(&fs); });
 
-    // mkdir config dir (ignore failure — may already exist)
     fsFsCreateDirectory(&fs, "/config");
     fsFsCreateDirectory(&fs, CONFIG_DIR);
 
-    // create the file if it doesn't exist yet (Write mode alone won't create)
     FsFile f;
     if (R_FAILED(fsFsOpenFile(&fs, CONFIG_FILE, FsOpenMode_Read | FsOpenMode_Write, &f))) {
         if (R_FAILED(fsFsCreateFile(&fs, CONFIG_FILE, 0, 0))) return false;
@@ -69,7 +93,10 @@ static inline bool saveCustomBundle(const std::vector<std::string>& lines) {
     tsl::hlp::ScopeGuard fGuard([&]{ fsFileClose(&f); });
 
     std::string out;
-    for (const auto& l : lines) { out += l; out += "\n"; }
+    for (const auto& b : bundles) {
+        out += "["; out += b.title; out += "]\n";
+        for (const auto& c : b.cheats) { out += c; out += "\n"; }
+    }
     Result rc = fsFileWrite(&f, 0, out.data(), out.size(), FsWriteOption_Flush);
     return R_SUCCEEDED(rc);
 }

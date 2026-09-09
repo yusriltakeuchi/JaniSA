@@ -23,17 +23,160 @@
 
 #include <vector>
 #include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <malloc.h>
+#include <switch/services/audout.h>
+// ---------------------------------------------------------------------------
+// CheckListItem — ListItem variant that draws a checkbox (square + checkmark)
+// using the renderer directly instead of relying on a font glyph (the shared
+// Nintendo fonts have no "✓" codepoint, so plain strings render blank).
+// ---------------------------------------------------------------------------
+class CheckListItem : public tsl::elm::ListItem {
+public:
+    CheckListItem(const std::string& text, bool checked)
+        : tsl::elm::ListItem(text), m_checked(checked) {
+        refresh();
+    }
+
+    void setChecked(bool checked) { m_checked = checked; refresh(); }
+    bool isChecked() const { return m_checked; }
+
+    virtual void draw(tsl::gfx::Renderer* renderer) override {
+        // Reuse ListItem::draw for the text + click animation + borders.
+        ListItem::draw(renderer);
+
+        // Draw the checkbox in the value area (right side), replacing the
+        // normal value string. Same anchor as ListItem::draw for m_value:
+        //   getX() + m_maxWidth + 45, centered vertically at getY()+45.
+        int cx = this->getX() + this->m_maxWidth + 45;
+        int cy = this->getY() + 36;
+        const int S = 18;   // box size
+
+        auto border = tsl::gfx::Renderer::a(tsl::style::color::ColorText);
+        auto check  = tsl::gfx::Renderer::a(tsl::style::color::ColorHighlight);
+
+        renderer->drawRect(cx, cy, S, 1, border);
+        renderer->drawRect(cx, cy + S, S, 1, border);
+        renderer->drawRect(cx, cy, 1, S, border);
+        renderer->drawRect(cx + S, cy, 1, S, border);
+
+        if (m_checked) {
+            // checkmark: two thick diagonal strokes
+            renderer->drawRect(cx + 3, cy + 9, 5, 3, check);
+            renderer->drawRect(cx + 6, cy + 12, 9, 3, check);
+            renderer->drawRect(cx + 6, cy + 12, 3, -3, check);
+        }
+    }
+
+private:
+    void refresh() {
+        // Keep ListItem::draw's value-width math happy — the box is drawn
+        // manually so the value string is empty.
+        this->setValue(m_checked ? "  " : "  ");
+    }
+
+    bool m_checked;
+};
 
 // ---------------------------------------------------------------------------
 // Custom bundle state — loaded from config on boot, edited via GuiBundleEditor,
-// injected as "Bundle E (Custom)" from the Bundling menu.
+// injected from the Bundling menu. Multiple user bundles supported.
 // ---------------------------------------------------------------------------
-struct CustomBundle {
-    // line[0] = title, line[1..] = cheat names
-    std::vector<std::string> lines;
-    bool dirty = false;   // needs re-save on next edit
-};
-static CustomBundle gCustom;
+static std::vector<janisaConfig::CustomBundleDef> gCustomBundles;
+
+// ---------------------------------------------------------------------------
+// SFX engine — simple PCM beeps via audout for user feedback.
+// Init once at overlay open, play short sine waves on actions.
+// ---------------------------------------------------------------------------
+
+static const u32 SFX_SR  = 48000;            // sample rate
+static const u32 SFX_CH  = 2;                // stereo
+static const float SFX_PI = 3.14159265f;
+
+static void* gSfxOn    = nullptr;  // cheat toggle ON
+static void* gSfxOff   = nullptr;  // cheat toggle OFF
+static void* gSfxOk    = nullptr;  // confirm / apply
+static void* gSfxDel   = nullptr;  // delete / hapus
+static u32   gSfxBytes = 0;        // aligned buffer size (0x1000)
+static bool  gSfxReady = false;
+
+static void exitSfx();   // forward decl — called from initSfx on failure
+
+// Generate a mono sine beep into a stereo 16-bit PCM buffer (0x1000-aligned).
+// len_ms: milliseconds; freq: Hz; vol: 0.0-1.0
+static void genBeep(void* buf, u32 len_ms, float freq, float vol) {
+    s16* p = (s16*)buf;
+    u32 samples = SFX_SR * len_ms / 1000;
+    for (u32 i = 0; i < samples; i++) {
+        float t = (float)i / SFX_SR;
+        float env = 1.0f - (float)i / samples;   // linear fade-out
+        s16 v = (s16)(vol * env * sinf(2.0f * SFX_PI * freq * t) * 32767);
+        p[i * 2]     = v;   // L
+        p[i * 2 + 1] = v;   // R
+    }
+}
+
+static void initSfx() {
+    // list devices
+    char devNames[0x100] = {};
+    u32 devCount = 0;
+    Result rc = audoutListAudioOuts(devNames, 1, &devCount);
+    if (R_FAILED(rc) || devCount == 0) return;
+
+    u32 sr = SFX_SR, ch = SFX_CH;
+    PcmFormat fmt = PcmFormat_Int16;
+    AudioOutState state;
+    rc = audoutOpenAudioOut(devNames, devNames, sr, ch, &sr, &ch, &fmt, &state);
+    if (R_FAILED(rc)) return;
+    audoutStartAudioOut();
+
+    // buffer: 100ms, 0x1000-aligned
+    u32 raw = SFX_SR * 100 / 1000 * SFX_CH * sizeof(s16);  // 19200
+    gSfxBytes = (raw + 0xFFF) & ~0xFFF;                     // 20480
+
+    gSfxOn  = memalign(0x1000, gSfxBytes);
+    gSfxOff = memalign(0x1000, gSfxBytes);
+    gSfxOk  = memalign(0x1000, gSfxBytes);
+    gSfxDel = memalign(0x1000, gSfxBytes);
+    if (!gSfxOn || !gSfxOff || !gSfxOk || !gSfxDel) { exitSfx(); return; }
+
+    // clear padding
+    memset(gSfxOn,  0, gSfxBytes);
+    memset(gSfxOff, 0, gSfxBytes);
+    memset(gSfxOk,  0, gSfxBytes);
+    memset(gSfxDel, 0, gSfxBytes);
+
+    genBeep(gSfxOn,  60, 880.0f, 0.25f);   // high blip — ON
+    genBeep(gSfxOff, 60, 440.0f, 0.20f);   // low blip  — OFF
+    genBeep(gSfxOk,  80, 660.0f, 0.25f);   // mid       — confirm
+    genBeep(gSfxDel, 80, 330.0f, 0.20f);   // low       — delete
+    gSfxReady = true;
+}
+
+static void exitSfx() {
+    if (gSfxReady) {
+        audoutStopAudioOut();
+        audoutExit();
+        gSfxReady = false;
+    }
+    free(gSfxOn);  gSfxOn  = nullptr;
+    free(gSfxOff); gSfxOff = nullptr;
+    free(gSfxOk);  gSfxOk  = nullptr;
+    free(gSfxDel); gSfxDel = nullptr;
+    gSfxBytes = 0;
+}
+
+// Play a pre-generated beep (blocking, ~60-100 ms)
+static void playSfx(void* buf) {
+    if (!gSfxReady || !buf) return;
+    AudioOutBuffer src = {};
+    src.buffer      = buf;
+    src.buffer_size = gSfxBytes;
+    src.data_size   = gSfxBytes;
+    AudioOutBuffer* released = nullptr;
+    audoutPlayBuffer(&src, &released);
+}
 
 // ---------------------------------------------------------------------------
 // Injector — plays cheat combos through the hid:dbg HDLS virtual pad.
@@ -51,7 +194,7 @@ struct Injector {
     HiddbgHdlsSessionId session = {};
     HiddbgHdlsHandle handle = {};
     u8 workBuffer[0x4000] alignas(0x1000);  // HDLS transfer memory (16KB)
-    bool attached = false;
+    std::atomic<bool> attached{false};   // HDLS virtual device attached
     Thread m_thread = {};
     std::atomic<bool> m_busy{false};        // a run is in-flight
     std::atomic<bool> m_scheduleClose{false}; // bg thread finished -> UI closes overlay
@@ -78,16 +221,15 @@ struct Injector {
     }
 
     void exit() {
-        // cancel any in-flight run and wait for the bg thread to finish
-        // BEFORE releasing hid:dbg — otherwise the thread may call
-        // hiddbgSetHdlsState on a torn-down session (use-after-free).
-        if (m_busy.load()) {
+        // Cancel any in-flight run and ALWAYS reap the bg thread before releasing
+        // hid:dbg. Previously we only joined when m_busy was set — but the run may
+        // have finished (m_busy already false) while m_thread was still never
+        // threadClose()d, leaking the thread object across overlay relaunches.
+        if (m_thread.handle != 0) {
             cancel();
-            if (m_thread.handle != 0) {
-                threadWaitForExit(&m_thread);
-                threadClose(&m_thread);
-                m_thread = {};
-            }
+            threadWaitForExit(&m_thread);
+            threadClose(&m_thread);
+            m_thread = {};
         }
         if (!attached) return;
         hiddbgDetachHdlsVirtualDevice(handle);
@@ -113,12 +255,22 @@ struct Injector {
         hiddbgSetHdlsState(handle, &state);
     }
 
+    // Reset transient injector state (queue etc.) — safe to call anytime.
+    void reset() {
+        mutexLock(&m_queueLock);
+        queue.clear(); qIndex = 0;
+        mutexUnlock(&m_queueLock);
+        m_busy = false;
+        m_scheduleClose = false;
+    }
+
     bool isBusy() const { return m_busy.load(); }
     bool shouldClose() { return m_scheduleClose.exchange(false); }
 
-    // UI thread: called every frame. Executes the pending close on the UI thread
-    // (never call Overlay::close() from the bg thread — it touches the renderer).
-    void tick() {
+    // UI thread: called during input processing (NOT update/render). Executes the
+    // pending close on the UI thread (never call Overlay::close() from the bg thread
+    // or from update() — it must not race the renderer).
+    void poll() {
         if (shouldClose()) tsl::Overlay::get()->close();
     }
 
@@ -157,9 +309,17 @@ private:
 
     void launch() {
         if (m_busy.load()) return;   // already injecting — ignore duplicate tap
+        // Reap any previous run's thread before creating a new one. Without this
+        // the stale Thread handle gets overwritten and never closed — leaks the
+        // kernel object and can corrupt state on repeated injections.
+        if (m_thread.handle != 0) {
+            threadWaitForExit(&m_thread);
+            threadClose(&m_thread);
+            m_thread = {};
+        }
         m_busy = true;
         tsl::Overlay::get()->hide();   // critical: hide BEFORE injecting
-        threadCreate(&m_thread, threadEntry, this, nullptr, 0x4000, 0x2c, -2);
+        threadCreate(&m_thread, threadEntry, this, nullptr, 0x8000, 0x2c, -2);
         threadStart(&m_thread);
     }
 
@@ -206,10 +366,11 @@ static InputGuard gGuard;
 class GuardedGui : public tsl::Gui {
 public:
     virtual void update() override {
-        gInjector.tick();   // UI thread: close overlay when bg inject finishes
+        // close() must not race the renderer — handled in handleInput() via poll()
     }
     virtual bool handleInput(u64 keysDown, u64 keysHeld,
         const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
+        gInjector.poll();   // UI thread: close overlay once bg inject finishes
         return gGuard.active();   // swallow ALL input (incl. B = back) during guard window
     }
 protected:
@@ -231,8 +392,10 @@ public:
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < cat.count; i++) {
             auto item = new tsl::elm::ListItem(cat.items[i].name);
+            item->setValue("▶");   // nav arrow on the right
             item->setClickListener([this, i](u64 keys){
                 if (!(keys & HidNpadButton_A)) return false;   // only A activates
+                playSfx(gSfxOk);
                 gInjector.start(&CATEGORIES[m_cat].items[i]);
                 return true;
             });
@@ -269,10 +432,11 @@ public:
             list->addItem(new tsl::elm::ListItem(c->name));   // read-only row
         }
 
-        auto confirm = new tsl::elm::ListItem("Confirm ▶");
+        auto confirm = new tsl::elm::ListItem("Confirm");
+        confirm->setValue("▶");
         confirm->setClickListener([order](u64 keys){
             if (!(keys & HidNpadButton_A)) return false;   // only A activates
-            if (!order.empty()) gInjector.startSequence(order);   // run ALL, no toggles
+            if (!order.empty()) { playSfx(gSfxOk); gInjector.startSequence(order); }   // run ALL, no toggles
             return true;
         });
         list->addItem(confirm);
@@ -285,45 +449,93 @@ private:
     const BundleDef* m_bundle;
 };
 
+
+// ===========================================================================
+// BUNDLE GUI LAYER
+// ===========================================================================
+
 // ---------------------------------------------------------------------------
 // Gui: bundle list (root-level Bundling entry)
+// Built-in bundles -> detail/run, custom bundles -> run, Custom Bundle -> hub
 // ---------------------------------------------------------------------------
-class GuiBundleEditor;   // forward decl (referenced from GuiBundles below)
+class GuiBundleEditor;   // forward decl
+class GuiCustomBundleHub;
+
 class GuiBundles : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
         beginInputGuard();
         auto frame = new tsl::elm::OverlayFrame("Bundling", "multi-cheat");
         auto list  = new tsl::elm::List();
+
+        // Built-in bundles (click -> detail)
         for (u32 i = 0; i < BUNDLE_COUNT; i++) {
-            char title[96]; snprintf(title, sizeof title, "\u25B6  %s", BUNDLES[i].title);   // ▶ icon
-            auto item = new tsl::elm::ListItem(title);
-            item->setValue(BUNDLES[i].desc);
+            auto item = new tsl::elm::ListItem(BUNDLES[i].title);
+            item->setValue(BUNDLES[i].desc);   // e.g. "3 cheats"
             item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
             list->addItem(item);
         }
 
-        // Bundle E — user-defined custom bundle (only if non-empty)
-        if (gCustom.lines.size() > 1) {   // title + at least 1 cheat
-            auto item = new tsl::elm::ListItem("\u25B6  Custom");   // ▶ icon
-            char sub[32]; snprintf(sub, sizeof sub, "%u cheats", (unsigned)(gCustom.lines.size() - 1));
+        // Custom bundles — click to RUN (no editing here)
+        for (size_t i = 0; i < gCustomBundles.size(); i++) {
+            const auto& b = gCustomBundles[i];
+            char sub[48]; snprintf(sub, sizeof sub, "%u cheats", (unsigned)b.cheats.size());
+            auto item = new tsl::elm::ListItem(b.title);
             item->setValue(sub);
-            // build a fake bundle descriptor from the loaded names, inject in order
-            item->setClickListener([](u64 keys){
+            item->setClickListener([i](u64 keys){
                 if (!(keys & HidNpadButton_A)) return false;
                 std::vector<const CheatEntry*> order;
-                for (size_t i = 1; i < gCustom.lines.size(); i++)
-                    if (const CheatEntry* c = findCheat(gCustom.lines[i].c_str())) order.push_back(c);
+                for (const auto& name : gCustomBundles[i].cheats)
+                    if (const CheatEntry* c = findCheat(name.c_str())) order.push_back(c);
                 if (!order.empty()) gInjector.startSequence(order);
                 return true;
             });
             list->addItem(item);
         }
 
-        // Edit custom bundle
-        auto edit = new tsl::elm::ListItem("\u25B6  Edit Custom Bundle");
-        edit->setValue("pick cheats");
-        edit->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleEditor>(); return true; });
+        // Custom Bundle hub — create / edit bundles
+        auto hub = new tsl::elm::ListItem("Custom Bundle");
+        hub->setValue("\u25B6");
+        hub->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiCustomBundleHub>(); return true; });
+        list->addItem(hub);
+
+        frame->setContent(list);
+        return frame;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Gui: custom bundle hub — create new bundle or edit existing ones
+// ---------------------------------------------------------------------------
+class GuiEditBundleList;
+
+class GuiCustomBundleHub : public GuardedGui {
+public:
+    virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
+        auto frame = new tsl::elm::OverlayFrame("Custom Bundle", "manage your bundles");
+        auto list  = new tsl::elm::List();
+
+        auto create = new tsl::elm::ListItem("Create Bundle");
+        create->setValue("+");
+        create->setClickListener([](u64 keys){
+            if (!(keys & HidNpadButton_A)) return false;
+            // Auto-name: Custom 1, Custom 2, ...
+            char nameBuf[32];
+            snprintf(nameBuf, sizeof nameBuf, "Custom %zu", gCustomBundles.size() + 1);
+            janisaConfig::CustomBundleDef nb;
+            nb.title = nameBuf;
+            nb.cheats.clear();
+            gCustomBundles.push_back(nb);
+            janisaConfig::saveBundles(gCustomBundles);
+            tsl::changeTo<GuiBundleEditor>(gCustomBundles.size() - 1);
+            return true;
+        });
+        list->addItem(create);
+
+        auto edit = new tsl::elm::ListItem("Edit Bundle");
+        edit->setValue("\u25B6");
+        edit->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiEditBundleList>(); return true; });
         list->addItem(edit);
 
         frame->setContent(list);
@@ -332,77 +544,107 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// Gui: custom bundle editor — pick cheats across all categories, Save persists.
+// Gui: edit bundle list — pick an existing custom bundle to edit
 // ---------------------------------------------------------------------------
-class GuiBundleEditor : public GuardedGui {
+class GuiEditBundleList : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
         beginInputGuard();
-        auto frame = new tsl::elm::OverlayFrame("Edit Custom Bundle", "A toggles · Save to keep");
+        auto frame = new tsl::elm::OverlayFrame("Edit Bundle", "select bundle to edit");
         auto list  = new tsl::elm::List();
 
-        // Flat list of all cheats across all categories, with selection state
-        std::vector<const CheatEntry*> all;
-        for (int c = 0; c < CATEGORY_COUNT; c++)
-            for (u32 i = 0; i < CATEGORIES[c].count; i++)
-                all.push_back(&CATEGORIES[c].items[i]);
-
-        // m_selected mirrors gCustom.lines[1..] at load
-        generateSelection();
-
-        for (size_t i = 0; i < all.size(); i++) {
-            auto item = new tsl::elm::ListItem(all[i]->name);
-            bool sel = isSelected(all[i]->name);
-            item->setValue(sel ? "✓" : "");
-            item->setClickListener([this, all, i, item](u64 keys){
-                if (!(keys & HidNpadButton_A)) return false;
-                toggle(all[i]->name);
-                item->setValue(isSelected(all[i]->name) ? "✓" : "");
-                return true;
-            });
+        for (size_t i = 0; i < gCustomBundles.size(); i++) {
+            const auto& b = gCustomBundles[i];
+            char sub[48]; snprintf(sub, sizeof sub, "%u cheats", (unsigned)b.cheats.size());
+            auto item = new tsl::elm::ListItem(b.title);
+            item->setValue(sub);
+            item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundleEditor>(i); return true; });
             list->addItem(item);
         }
 
-        auto save = new tsl::elm::ListItem("Save Bundle ▶");
-        save->setClickListener([this](u64 keys){
+        frame->setContent(list);
+        return frame;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Gui: custom bundle editor — checklist of cheats + Apply + Hapus
+// ---------------------------------------------------------------------------
+class GuiBundleEditor : public GuardedGui {
+public:
+    GuiBundleEditor(size_t idx) : m_idx(idx) {}
+
+    virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
+        auto& b = gCustomBundles[m_idx];
+        auto frame = new tsl::elm::OverlayFrame("Edit Bundle", b.title.c_str());
+        auto list  = new tsl::elm::List();
+
+        // Apply — save selection and go back
+        auto apply = new tsl::elm::ListItem("Apply");
+        apply->setValue("\u25B6");
+        apply->setClickListener([this](u64 keys){
             if (!(keys & HidNpadButton_A)) return false;
-            saveSelected();
+            playSfx(gSfxOk);
+            gCustomBundles[m_idx].cheats = m_selected;
+            janisaConfig::saveBundles(gCustomBundles);
+            tsl::changeTo<GuiBundles>();
             return true;
         });
-        list->addItem(save);
+        list->addItem(apply);
+
+        // Hapus — delete this bundle entirely
+        auto hapus = new tsl::elm::ListItem("Hapus");
+        hapus->setValue("\u25B6");
+        hapus->setClickListener([this](u64 keys){
+            if (!(keys & HidNpadButton_A)) return false;
+            playSfx(gSfxDel);
+            gCustomBundles.erase(gCustomBundles.begin() + m_idx);
+            janisaConfig::saveBundles(gCustomBundles);
+            tsl::changeTo<GuiBundles>();
+            return true;
+        });
+        list->addItem(hapus);
+
+        // Build selection mirror from existing cheats
+        m_selected.clear();
+        for (const auto& s : gCustomBundles[m_idx].cheats) m_selected.push_back(s);
+
+        // Cheat checklist (all 82)
+        for (int c = 0; c < CATEGORY_COUNT; c++)
+            for (u32 i = 0; i < CATEGORIES[c].count; i++) {
+                bool sel = false;
+                for (const auto& s : m_selected) if (s == CATEGORIES[c].items[i].name) { sel = true; break; }
+                auto item = new CheckListItem(CATEGORIES[c].items[i].name, sel);
+                item->setClickListener([this, i, c, item](u64 keys){
+                    if (!(keys & HidNpadButton_A)) return false;
+                    bool on = !isSelected(CATEGORIES[c].items[i].name);
+                    setSelected(CATEGORIES[c].items[i].name, on);
+                    item->setChecked(on);
+                    playSfx(on ? gSfxOn : gSfxOff);
+                    return true;
+                });
+                list->addItem(item);
+            }
 
         frame->setContent(list);
         return frame;
     }
 
 private:
+    size_t m_idx;
     std::vector<std::string> m_selected;
 
-    void generateSelection() {
-        m_selected.clear();
-        for (size_t i = 1; i < gCustom.lines.size(); i++)
-            m_selected.push_back(gCustom.lines[i]);
-    }
     bool isSelected(const char* name) const {
         for (const auto& s : m_selected) if (s == name) return true;
         return false;
     }
-    void toggle(const char* name) {
+    void setSelected(const char* name, bool on) {
         for (size_t i = 0; i < m_selected.size(); i++)
-            if (m_selected[i] == name) { m_selected.erase(m_selected.begin() + i); return; }
-        if (m_selected.size() < janisaConfig::MAX_CUSTOM_CHEATS) m_selected.push_back(name);
-    }
-    void saveSelected() {
-        std::vector<std::string> lines;
-        lines.push_back("Custom");   // bundle title
-        for (const auto& s : m_selected) lines.push_back(s);
-        janisaConfig::saveCustomBundle(lines);
-        gCustom.lines = lines;
-        gCustom.dirty = false;
-        tsl::changeTo<GuiBundles>();
+            if (m_selected[i] == name) { if (!on) m_selected.erase(m_selected.begin() + i); return; }
+        if (on && m_selected.size() < janisaConfig::MAX_CUSTOM_CHEATS) m_selected.push_back(name);
     }
 };
-
 // ---------------------------------------------------------------------------
 // Gui: category list (root)
 // ---------------------------------------------------------------------------
@@ -414,16 +656,15 @@ public:
         auto list  = new tsl::elm::List();
 
         // Bundling entry at top of root menu
-        auto b = new tsl::elm::ListItem("\u25B6  Bundling");   // ▶ icon (std font, safe)
-        b->setValue("\u25B6 run several cheats at once");
+        auto b = new tsl::elm::ListItem("Bundling");
+        b->setValue("Packs");
         b->setClickListener([](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiBundles>(); return true; });
         list->addItem(b);
 
         for (int i = 0; i < CATEGORY_COUNT; i++) {
-            char title[96]; snprintf(title, sizeof title, "\u25B6  %s", CATEGORIES[i].title);   // ▶ icon prefix
-            auto item = new tsl::elm::ListItem(title);
+            auto item = new tsl::elm::ListItem(CATEGORIES[i].title);
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", CATEGORIES[i].count);
-            item->setValue(sub);
+            item->setValue(sub);   // count — no nav arrow on category rows
             item->setClickListener([i](u64 keys){ if (!(keys & HidNpadButton_A)) return false; tsl::changeTo<GuiCheats>(i); return true; });
             list->addItem(item);
         }
@@ -433,16 +674,20 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// OverlayGTA — Tesla overlay entry point
+// ---------------------------------------------------------------------------
 class OverlayGTA : public tsl::Overlay {
 public:
     virtual void initServices() override {
-        // hid:dbg needed for injector
+        gInjector.exit();   // idempotent
+        gInjector.reset();
         hiddbgInitialize();
-        // load user-defined bundle from SD config
-        gCustom.lines = janisaConfig::loadCustomBundle();
+        initSfx();                          // audout PCM for SFX feedback
+        gCustomBundles = janisaConfig::loadBundles();
     }
     virtual void exitServices() override {
-        gInjector.exit();   // detach HDLS virtual pad + release buffer
+        gInjector.exit();
+        exitSfx();                          // release audout before hiddbg
         hiddbgExit();
     }
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {

@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this
 
 ---
 
+## [0.2.2] — 2026-09-09
+
+### Added
+- **SFX feedback** — audible beep on cheat toggle, confirm, apply, delete. Uses `audout` PCM output (sine wave, no external files). 4 tones: ON (880 Hz), OFF (440 Hz), confirm/apply (660 Hz), delete (330 Hz). Graceful fallback if audout unavailable.
+
+### Changed
+- **Custom Bundle naming** — Create Bundle now uses auto-increment name ("Custom 1", "Custom 2", ...) instead of OSK keyboard (applet services unavailable from Tesla overlay context). Removed `GuiRename` class and all `swkbd`/`applet` references.
+
+### Fixed
+- **Overlay crash on launch** — removed `appletInitialize()`/`appletExit()` calls that caused total hang when overlay runs as `AppletType_None` (hotkey unresponsive, required Switch restart). Root cause: applet services cannot be initialized from overlay process context.
+
+---
+
 ## [0.2.1] — 2026-09-09
 
 ### Added
