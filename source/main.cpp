@@ -106,24 +106,38 @@ struct Injector {
 static Injector gInjector;
 
 // ---------------------------------------------------------------------------
-// Input guard base — swallows input for the first N frames after a Gui spawns.
+// Input guard — swallows input for a short real-time window after a Gui spawns.
 // Fixes: A/B still HELD from the previous screen (e.g. selecting the overlay in
-// Tesla) bleeding through and instantly triggering the first list item.
+// Tesla) bleeding through — the held key gets buffered in keysDownPending during
+// the fade-in animation and fires onClick on the first item the moment input
+// processing resumes. A frame counter CANNOT guard this (update() runs during
+// fade while handleInput does not), so we use real time.
+// Must gate BOTH the click listeners (which Overlay::handleInput fires BEFORE
+// Gui::handleInput) AND the Gui handleInput (for D-pad focus / back).
 // ---------------------------------------------------------------------------
-constexpr int INPUT_GUARD_FRAMES = 20;   // ~333ms @60fps — enough for held buttons to release
+constexpr std::chrono::milliseconds INPUT_GUARD_MS(500);
+
+struct InputGuard {
+    std::chrono::steady_clock::time_point armed = std::chrono::steady_clock::now();
+    bool active() const {
+        return std::chrono::steady_clock::now() - armed < INPUT_GUARD_MS;
+    }
+    void reset() { armed = std::chrono::steady_clock::now(); }
+};
+static InputGuard gGuard;
 
 class GuardedGui : public tsl::Gui {
 public:
     virtual void update() override {
-        m_frame++;
         gInjector.tick();
     }
     virtual bool handleInput(u64 keysDown, u64 keysHeld,
         const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
-        return m_frame < INPUT_GUARD_FRAMES;   // swallow all input during spawn
+        return gGuard.active();   // swallow ALL input (incl. B = back) during guard window
     }
 protected:
-    int m_frame = 0;
+    // re-arm the guard on every screen change
+    void beginInputGuard() { gGuard.reset(); }
 };
 
 // ---------------------------------------------------------------------------
@@ -134,12 +148,14 @@ public:
     GuiCheats(int catIdx) : m_cat(catIdx) {}
 
     virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
         auto& cat = CATEGORIES[m_cat];
         auto frame = new tsl::elm::OverlayFrame(cat.title, "GTA SA Cheats");
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < cat.count; i++) {
             auto item = new tsl::elm::ListItem(cat.items[i].name);
             item->setClickListener([this, i](u64){
+                if (gGuard.active()) return false;   // swallow ghost A from Tesla
                 gInjector.start(&CATEGORIES[m_cat].items[i]);
                 return true;
             });
@@ -161,6 +177,7 @@ public:
     GuiBundleDetail(int bundleIdx) : m_bundle(&BUNDLES[bundleIdx]) {}
 
     virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
         char subtitle[64];
         snprintf(subtitle, sizeof subtitle, "%u cheats · confirm to run", m_bundle->count);
         auto frame = new tsl::elm::OverlayFrame(m_bundle->title, subtitle);
@@ -177,6 +194,7 @@ public:
 
         auto confirm = new tsl::elm::ListItem("Confirm ▶");
         confirm->setClickListener([order](u64){
+            if (gGuard.active()) return false;   // swallow ghost A
             if (!order.empty()) gInjector.startSequence(order);   // run ALL, no toggles
             return true;
         });
@@ -196,12 +214,13 @@ private:
 class GuiBundles : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
         auto frame = new tsl::elm::OverlayFrame("Bundling", "multi-cheat");
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < BUNDLE_COUNT; i++) {
             auto item = new tsl::elm::ListItem(BUNDLES[i].title);
             item->setValue(BUNDLES[i].desc);
-            item->setClickListener([i](u64){ tsl::changeTo<GuiBundleDetail>(i); return true; });
+            item->setClickListener([i](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiBundleDetail>(i); return true; });
             list->addItem(item);
         }
         frame->setContent(list);
@@ -215,20 +234,21 @@ public:
 class GuiCategories : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
+        beginInputGuard();
         auto frame = new tsl::elm::OverlayFrame("GTA SA Cheats", "82 cheats");
         auto list  = new tsl::elm::List();
 
         // Bundling entry at top of root menu
         auto b = new tsl::elm::ListItem("Bundling");
         b->setValue("run several cheats at once");
-        b->setClickListener([](u64){ tsl::changeTo<GuiBundles>(); return true; });
+        b->setClickListener([](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiBundles>(); return true; });
         list->addItem(b);
 
         for (int i = 0; i < CATEGORY_COUNT; i++) {
             auto item = new tsl::elm::ListItem(CATEGORIES[i].title);
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", CATEGORIES[i].count);
             item->setValue(sub);
-            item->setClickListener([i](u64){ tsl::changeTo<GuiCheats>(i); return true; });
+            item->setClickListener([i](u64){ if (gGuard.active()) return false; tsl::changeTo<GuiCheats>(i); return true; });
             list->addItem(item);
         }
         frame->setContent(list);
