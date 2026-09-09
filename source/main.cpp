@@ -17,23 +17,32 @@
 #define TESLA_INIT_IMPL
 #include <tesla.hpp>
 #include "gta_cheats_data.hpp"
+#include "gta_bundles_data.hpp"
 
 #include <vector>
 #include <cstdio>
 
 // ---------------------------------------------------------------------------
 // Injector — frame-accurate combo playback through hid:dbg autopilot
+// Supports single cheats AND sequences of cheats (bundles).
 // ---------------------------------------------------------------------------
 struct Injector {
     bool playing = false;
+    std::vector<const CheatEntry*> queue;   // sequence of cheats to play
+    size_t qIndex = 0;                       // current cheat in queue
     const CheatEntry* cur = nullptr;
     int idx = 0;
     int hold = 0;
     static constexpr int HOLD_FRAMES = 2;   // frames each button is held
 
-    void start(const CheatEntry* c) { cur = c; idx = 0; hold = 0; playing = true; }
-    void stop()  { playing = false; cur = nullptr; }
+    // play a single cheat (existing behavior)
+    void start(const CheatEntry* c) { queue.clear(); queue.push_back(c); begin(); }
+    // play a list of cheats back-to-back (bundles)
+    void startSequence(const std::vector<const CheatEntry*>& seq) { queue = seq; qIndex = 0; begin(); }
+    void begin() { playing = !queue.empty(); idx = 0; hold = 0; cur = playing ? queue[0] : nullptr; }
+    void stop()  { playing = false; cur = nullptr; queue.clear(); }
     bool active() const { return playing; }
+    size_t remaining() const { return queue.empty() ? 0 : queue.size() - qIndex; }
 
     // Send raw button mask to hid:dbg. Replace with your hid path if needed.
     void setButtons(u64 mask) {
@@ -51,7 +60,11 @@ struct Injector {
         if (++hold >= HOLD_FRAMES) {
             setButtons(0);               // release
             idx++; hold = 0;
-            if (idx >= (int)cur->len) { setButtons(0); stop(); }
+            if (idx >= (int)cur->len) {  // this cheat done -> next in queue
+                idx = 0; qIndex++;
+                if (qIndex < queue.size()) { cur = queue[qIndex]; }
+                else { setButtons(0); stop(); }
+            }
         }
     }
 };
@@ -92,6 +105,74 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// Gui: bundle detail — read-only cheat list + Confirm (runs ALL cheats in order)
+// ---------------------------------------------------------------------------
+class GuiBundleDetail : public tsl::Gui {
+public:
+    GuiBundleDetail(int bundleIdx) : m_bundle(&BUNDLES[bundleIdx]) {}
+
+    virtual tsl::elm::Element* createUI() override {
+        char subtitle[64];
+        snprintf(subtitle, sizeof subtitle, "%u cheats · confirm to run", m_bundle->count);
+        auto frame = new tsl::elm::OverlayFrame(m_bundle->title, subtitle);
+        auto list  = new tsl::elm::List();
+
+        // resolve bundle -> ordered list of CheatEntry*, skipping unknown names
+        std::vector<const CheatEntry*> order;
+        for (u32 i = 0; i < m_bundle->count; i++) {
+            const CheatEntry* c = findCheat(m_bundle->cheatNames[i]);
+            if (!c) continue;
+            order.push_back(c);
+            list->addItem(new tsl::elm::ListItem(c->name));   // read-only row
+        }
+
+        auto confirm = new tsl::elm::ListItem("Confirm ▶");
+        confirm->setClickListener([order](u64){
+            if (!order.empty()) gInjector.startSequence(order);   // run ALL, no toggles
+            return true;
+        });
+        list->addItem(confirm);
+
+        frame->setContent(list);
+        return frame;
+    }
+
+    virtual void update() override { gInjector.tick(); }
+    virtual bool handleInput(u64 keysDown, u64 keysHeld,
+        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
+        return false;
+    }
+
+private:
+    const BundleDef* m_bundle;
+};
+
+// ---------------------------------------------------------------------------
+// Gui: bundle list (root-level Bundling entry)
+// ---------------------------------------------------------------------------
+class GuiBundles : public tsl::Gui {
+public:
+    virtual tsl::elm::Element* createUI() override {
+        auto frame = new tsl::elm::OverlayFrame("Bundling", "multi-cheat");
+        auto list  = new tsl::elm::List();
+        for (u32 i = 0; i < BUNDLE_COUNT; i++) {
+            auto item = new tsl::elm::ListItem(BUNDLES[i].title);
+            item->setValue(BUNDLES[i].desc);
+            item->setClickListener([i](u64){ tsl::changeTo<GuiBundleDetail>(i); return true; });
+            list->addItem(item);
+        }
+        frame->setContent(list);
+        return frame;
+    }
+
+    virtual void update() override { gInjector.tick(); }
+    virtual bool handleInput(u64 keysDown, u64 keysHeld,
+        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
+        return false;
+    }
+};
+
+// ---------------------------------------------------------------------------
 // Gui: category list (root)
 // ---------------------------------------------------------------------------
 class GuiCategories : public tsl::Gui {
@@ -99,6 +180,13 @@ public:
     virtual tsl::elm::Element* createUI() override {
         auto frame = new tsl::elm::OverlayFrame("GTA SA Cheats", "82 cheats");
         auto list  = new tsl::elm::List();
+
+        // Bundling entry at top of root menu
+        auto b = new tsl::elm::ListItem("Bundling");
+        b->setValue("run several cheats at once");
+        b->setClickListener([](u64){ tsl::changeTo<GuiBundles>(); return true; });
+        list->addItem(b);
+
         for (int i = 0; i < CATEGORY_COUNT; i++) {
             auto item = new tsl::elm::ListItem(CATEGORIES[i].title);
             char sub[32]; snprintf(sub, sizeof sub, "%u cheats", CATEGORIES[i].count);
