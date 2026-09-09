@@ -7,7 +7,8 @@
 // UX: Tesla open-combo (default L+DDOWN) -> category list -> cheat list -> pick -> auto-inject.
 // All 82 cheats, grouped into 7 categories. Data in gta_cheats_data.hpp.
 //
-// Injection: uses hid:dbg hiddbgSetDebugPadAutoPilotState / hiddbgSetAutoPilotVirtualPadState
+// Injection: uses hid:dbg HDLS virtual pad (hiddbgAttachHdlsVirtualDevice +
+// hiddbgSetHdlsState) — the path retail games actually read.
 // (libnx hiddbg.h). This path can push synthetic buttons to the system HID layer that
 // native retail games receive — no sysmodule needed for the overlay itself as long as
 // hid:dbg is accessible from the applet context. If hid:dbg is blocked, use the
@@ -23,7 +24,10 @@
 #include <cstdio>
 
 // ---------------------------------------------------------------------------
-// Injector — frame-accurate combo playback through hid:dbg autopilot
+// Injector — frame-accurate combo playback through hid:dbg HDLS virtual pad.
+// HDLS virtual pad IS read by retail games (DebugPad autopilot is NOT — that's
+// why Confirm did nothing). We attach a virtual FullKey (Pro Controller) and
+// push button state via hiddbgSetHdlsState.
 // Supports single cheats AND sequences of cheats (bundles).
 // ---------------------------------------------------------------------------
 struct Injector {
@@ -35,23 +39,54 @@ struct Injector {
     int hold = 0;
     static constexpr int HOLD_FRAMES = 2;   // frames each button is held
 
+    HiddbgHdlsSessionId session = {};
+    HiddbgHdlsHandle handle = {};
+    u8 workBuffer[0x4000] alignas(0x1000);  // HDLS transfer memory (16KB)
+    bool attached = false;
+
+    bool init() {
+        if (attached) return true;
+        Result rc = hiddbgAttachHdlsWorkBuffer(&session, workBuffer, sizeof(workBuffer));
+        if (R_FAILED(rc)) return false;
+        HiddbgHdlsDeviceInfo info = {};
+        info.deviceType = HidDeviceType_FullKey3;   // Pro Controller
+        info.npadInterfaceType = HidNpadInterfaceType_USB;
+        rc = hiddbgAttachHdlsVirtualDevice(&handle, &info);
+        if (R_FAILED(rc)) { hiddbgReleaseHdlsWorkBuffer(session); return false; }
+        attached = true;
+        // battery/flags so the pad looks powered-on to the game
+        HiddbgHdlsState s = {}; s.flags = 0b11; s.battery_level = 4;
+        hiddbgSetHdlsState(handle, &s);
+        return true;
+    }
+
+    void exit() {
+        if (!attached) return;
+        hiddbgDetachHdlsVirtualDevice(handle);
+        hiddbgReleaseHdlsWorkBuffer(session);
+        attached = false;
+    }
+
     // play a single cheat (existing behavior)
     void start(const CheatEntry* c) { queue.clear(); queue.push_back(c); begin(); }
     // play a list of cheats back-to-back (bundles)
     void startSequence(const std::vector<const CheatEntry*>& seq) { queue = seq; qIndex = 0; begin(); }
-    void begin() { playing = !queue.empty(); idx = 0; hold = 0; cur = playing ? queue[0] : nullptr; }
+    void begin() {
+        if (queue.empty()) { playing = false; cur = nullptr; return; }
+        if (!init()) { playing = false; cur = nullptr; return; }
+        playing = true; idx = 0; hold = 0; cur = queue[0];
+    }
     void stop()  { playing = false; cur = nullptr; queue.clear(); }
     bool active() const { return playing; }
     size_t remaining() const { return queue.empty() ? 0 : queue.size() - qIndex; }
 
-    // Send raw button mask to hid:dbg. Replace with your hid path if needed.
+    // Push raw button bitmask to the HDLS virtual pad (read by retail games).
     void setButtons(u64 mask) {
-        HiddbgDebugPadAutoPilotState state = {};
-        state.buttons = (u32)mask;
-        hiddbgSetDebugPadAutoPilotState(&state);
-        // On atmosphere with virtual-pad support you may prefer:
-        //   HiddbgAbstractedPadState vstate = {}; vstate.buttons = mask;
-        //   hiddbgSetAutoPilotVirtualPadState(0, &vstate);
+        HiddbgHdlsState state = {};
+        state.flags = 0b11;            // powered + charging
+        state.battery_level = 4;       // full battery — game ignores pad if low
+        state.buttons = mask & 0xfffffffff00fffffULL;   // mask valid bits
+        hiddbgSetHdlsState(handle, &state);
     }
 
     void tick() {
@@ -209,7 +244,7 @@ public:
         hiddbgInitialize();
     }
     virtual void exitServices() override {
-        hiddbgSetDebugPadAutoPilotState(nullptr);   // clear
+        gInjector.exit();   // detach HDLS virtual pad + release buffer
         hiddbgExit();
     }
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
