@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this
 
 ---
 
+## [0.2.0] — 2026-09-09
+
+### Added
+- **Bundle E — Custom user-defined bundle** 🎛️
+  - New **"Edit Custom Bundle"** screen in the Bundling menu — pick any subset of the 82 cheats (A toggles, up to 16).
+  - Selection persists to `/config/JaniSA/JaniSA.ini` on the SD card (survives reboots).
+  - A **Custom** entry appears in the Bundling list; confirm to inject all selected cheats in order.
+- Config persistence layer (`gta_config.hpp`) — INI-style read/write on `sdmc:` (same pattern as libtesla's own config).
+
+### Changed
+- None
+
+### Removed / Won't do
+- **Haptic feedback** — removed. `HiddbgHdlsState` has no vibration field (only battery/flags/buttons/sticks/indicator); vibration needs a separate `hid` service handle owned by the game, not reachable from an applet overlay.
+- **Additional cheat categories** — removed. All 82 GTA SA DE cheats are already present; nothing to add.
+
+---
+
 ## [0.1.0] — 2026-09-09
 
 ### 🎉 Initial public release
@@ -46,7 +64,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this
 
 ## [Unreleased]
 
-- Bundle E — Custom multi-cheat bundle (user-defined)
-- Additional cheat categories
-- Haptic feedback on cheat activation (if HDLS vibration supported)
-- Sysmodule fallback for applet-blocked `hid:dbg`
+### Planned (roadmap)
+- **Sysmodule fallback** for applet-blocked `hid:dbg` — out-of-scope for this overlay; will be a separate companion project.

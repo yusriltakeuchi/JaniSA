@@ -10,7 +10,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![Author](https://img.shields.io/badge/by-Jani-0088cc?style=for-the-badge)](https://github.com/yusriltakeuchi)
-[![Version](https://img.shields.io/badge/version-0.1.0-88c100?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/version-0.2.0-88c100?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Cheats](https://img.shields.io/badge/cheats-82-orange?style=for-the-badge)]()
 [![Platform](https://img.shields.io/badge/platform-Switch_CFW-6a737d?style=for-the-badge)]()
@@ -28,7 +28,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 Full changelog: **[CHANGELOG.md](CHANGELOG.md)**
 
-Latest release: **[v0.1.0](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.1.0)** — 82 cheats, bundling, auto-injection.
+Latest release: **[v0.2.0](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.0)** — now with **custom user-defined bundles**. 🎛️
 
 ---
 
@@ -127,6 +127,7 @@ Run **several cheats in sequence** from a single confirmation — perfect for lo
 | **Weapons Pack** | Weapons 1 + Weapons 2 + Weapons 3 + Infinite Ammo |
 | **Wanted Control** | Wanted Level Down + Lock Wanted Level |
 | **Traffic Mayhem** | Rhino Tank + Hydra + Blow Up All Cars + Aggressive Traffic |
+| **Custom** 🎛️ | **You** pick — build your own with *Edit Custom Bundle* |
 
 **How to use:**
 
@@ -136,6 +137,14 @@ Run **several cheats in sequence** from a single confirmation — perfect for lo
 4. Select **Confirm ▶** → all cheats inject back-to-back, automatically.
 
 > Bundles run **sequentially** (not in parallel). The injector waits for each cheat's combo to finish before starting the next.
+
+### 🎛️ Build your own bundle
+
+1. In the Bundling menu, select **Edit Custom Bundle**.
+2. Scroll the full list of 82 cheats — press **A** to toggle each one in/out (up to 16).
+3. Select **Save Bundle ▶** → your selection is stored to `/config/JaniSA/JaniSA.ini` on the SD card.
+4. A **Custom** entry now appears in the Bundling list — confirm it to run all your chosen cheats.
+5. It survives reboots. Edit anytime to change it.
 
 ---
 
@@ -307,10 +316,12 @@ JaniSA/
 ├── source/
 │   ├── main.cpp              — overlay UI + injector (hid:dbg)
 │   ├── gta_cheats_data.hpp   — 82 cheats & combos (auto-generated)
-│   └── gta_bundles_data.hpp  — multi-cheat bundle definitions
+│   ├── gta_bundles_data.hpp  — multi-cheat bundle definitions
+│   └── gta_config.hpp        — custom bundle persistence (sdmc:/config/JaniSA/)
 ├── libs/libtesla/            — overlay framework (vendored)
 ├── Makefile
 ├── LICENSE
+├── CHANGELOG.md
 └── README.md
 ```
 
