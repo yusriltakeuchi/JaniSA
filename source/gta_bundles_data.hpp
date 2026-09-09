@@ -46,9 +46,9 @@ static const char* const BUNDLE_D_NAMES[] = {
 };
 
 static const BundleDef BUNDLES[] = {
-    { "Money & Health",      "health, armor, cash \u00b7 3 cheats",   BUNDLE_A_NAMES, sizeof(BUNDLE_A_NAMES)/sizeof(BUNDLE_A_NAMES[0]) },
-    { "Weapons Pack",        "all weapons + infinite ammo \u00b7 4 cheats", BUNDLE_B_NAMES, sizeof(BUNDLE_B_NAMES)/sizeof(BUNDLE_B_NAMES[0]) },
-    { "Wanted Control",      "clear & lock wanted level \u00b7 2 cheats",  BUNDLE_C_NAMES, sizeof(BUNDLE_C_NAMES)/sizeof(BUNDLE_C_NAMES[0]) },
-    { "Traffic Mayhem",      "tanks, jets & chaos \u00b7 4 cheats",   BUNDLE_D_NAMES, sizeof(BUNDLE_D_NAMES)/sizeof(BUNDLE_D_NAMES[0]) },
+    { "Money & Health",      "3 cheats",   BUNDLE_A_NAMES, sizeof(BUNDLE_A_NAMES)/sizeof(BUNDLE_A_NAMES[0]) },
+    { "Weapons Pack",        "4 cheats",   BUNDLE_B_NAMES, sizeof(BUNDLE_B_NAMES)/sizeof(BUNDLE_B_NAMES[0]) },
+    { "Wanted Control",      "2 cheats",   BUNDLE_C_NAMES, sizeof(BUNDLE_C_NAMES)/sizeof(BUNDLE_C_NAMES[0]) },
+    { "Traffic Mayhem",      "4 cheats",   BUNDLE_D_NAMES, sizeof(BUNDLE_D_NAMES)/sizeof(BUNDLE_D_NAMES[0]) },
 };
 static const u32 BUNDLE_COUNT = sizeof(BUNDLES)/sizeof(BUNDLES[0]);
