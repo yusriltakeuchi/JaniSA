@@ -28,7 +28,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 Full changelog: **[CHANGELOG.md](CHANGELOG.md)**
 
-Latest release: **[v0.2.0](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.0)** — now with **custom user-defined bundles**. 🎛️
+Latest release: **[v0.2.1](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.1)** — custom bundles + **menu icons**. 🎛️▶️
 
 ---
 
