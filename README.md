@@ -2,6 +2,8 @@
 
 # 🚗 JaniSA
 
+![JaniSA Preview](screenshots/JaniSA_Preview.jpg)
+
 ### GTA San Andreas Cheat Overlay for Nintendo Switch
 
 **Press a button. Get everything.**
