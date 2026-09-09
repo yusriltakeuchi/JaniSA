@@ -71,9 +71,30 @@ struct Injector {
 static Injector gInjector;
 
 // ---------------------------------------------------------------------------
+// Input guard base — swallows input for the first N frames after a Gui spawns.
+// Fixes: A/B still HELD from the previous screen (e.g. selecting the overlay in
+// Tesla) bleeding through and instantly triggering the first list item.
+// ---------------------------------------------------------------------------
+constexpr int INPUT_GUARD_FRAMES = 20;   // ~333ms @60fps — enough for held buttons to release
+
+class GuardedGui : public tsl::Gui {
+public:
+    virtual void update() override {
+        m_frame++;
+        gInjector.tick();
+    }
+    virtual bool handleInput(u64 keysDown, u64 keysHeld,
+        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
+        return m_frame < INPUT_GUARD_FRAMES;   // swallow all input during spawn
+    }
+protected:
+    int m_frame = 0;
+};
+
+// ---------------------------------------------------------------------------
 // Gui: cheat list for a category
 // ---------------------------------------------------------------------------
-class GuiCheats : public tsl::Gui {
+class GuiCheats : public GuardedGui {
 public:
     GuiCheats(int catIdx) : m_cat(catIdx) {}
 
@@ -93,13 +114,6 @@ public:
         return frame;
     }
 
-    virtual void update() override { gInjector.tick(); }
-
-    virtual bool handleInput(u64 keysDown, u64 keysHeld,
-        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
-        return false;
-    }
-
 private:
     int m_cat;
 };
@@ -107,7 +121,7 @@ private:
 // ---------------------------------------------------------------------------
 // Gui: bundle detail — read-only cheat list + Confirm (runs ALL cheats in order)
 // ---------------------------------------------------------------------------
-class GuiBundleDetail : public tsl::Gui {
+class GuiBundleDetail : public GuardedGui {
 public:
     GuiBundleDetail(int bundleIdx) : m_bundle(&BUNDLES[bundleIdx]) {}
 
@@ -137,12 +151,6 @@ public:
         return frame;
     }
 
-    virtual void update() override { gInjector.tick(); }
-    virtual bool handleInput(u64 keysDown, u64 keysHeld,
-        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
-        return false;
-    }
-
 private:
     const BundleDef* m_bundle;
 };
@@ -150,7 +158,7 @@ private:
 // ---------------------------------------------------------------------------
 // Gui: bundle list (root-level Bundling entry)
 // ---------------------------------------------------------------------------
-class GuiBundles : public tsl::Gui {
+class GuiBundles : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
         auto frame = new tsl::elm::OverlayFrame("Bundling", "multi-cheat");
@@ -164,18 +172,12 @@ public:
         frame->setContent(list);
         return frame;
     }
-
-    virtual void update() override { gInjector.tick(); }
-    virtual bool handleInput(u64 keysDown, u64 keysHeld,
-        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
-        return false;
-    }
 };
 
 // ---------------------------------------------------------------------------
 // Gui: category list (root)
 // ---------------------------------------------------------------------------
-class GuiCategories : public tsl::Gui {
+class GuiCategories : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
         auto frame = new tsl::elm::OverlayFrame("GTA SA Cheats", "82 cheats");
@@ -196,12 +198,6 @@ public:
         }
         frame->setContent(list);
         return frame;
-    }
-
-    virtual void update() override { gInjector.tick(); }
-    virtual bool handleInput(u64 keysDown, u64 keysHeld,
-        const HidTouchState &touch, HidAnalogStickState l, HidAnalogStickState r) override {
-        return false;
     }
 };
 
