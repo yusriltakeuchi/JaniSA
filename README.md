@@ -65,9 +65,9 @@ Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag
 
 | Component | What it is | Link |
 |-----------|-----------|------|
-| **Atmosphere** | Custom firmware | [Atmosphere-NX/Atmosphere](https://github.com/Atmosphere-NX/Atmosphere) (1.7.0+) |
+| **Atmosphere** | Custom firmware | [Atmosphere-NX/Atmosphere](https://github.com/Atmosphere-NX/Atmosphere) — **tested on 1.9.1** |
 | **Tesla-Menu** | Overlay loader menu | [WerWolv/Tesla-Menu](https://github.com/WerWolv/Tesla-Menu) |
-| **nx-ovlloader** | Boot-time overlay loader | [Atmosphere-NX/nx-ovlloader](https://github.com/Atmosphere-NX/nx-ovlloader) |
+| **nx-ovlloader** | Boot-time overlay loader | [Atmosphere-NX/nx-ovlloader](https://github.com/Atmosphere-NX/nx-ovlloader) — **tested on v1.0.6-13205c6** |
 
 > Don't have Tesla yet? Grab it via [The Ultimate AIO Switch Updater](https://github.com/HamletDuFromage/aio-switch-updater) or set it up manually.
 
