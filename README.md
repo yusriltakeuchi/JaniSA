@@ -1,4 +1,6 @@
-# GTA Switch Cheat Overlay
+# 🚗 JaniSA — GTA SA Cheat Overlay
+
+**Author: Jani** · v0.1.0
 
 Tesla overlay untuk **GTA San Andreas – Definitive Edition** di Nintendo Switch (Atmosphere CFW).
 Buka overlay pas lagi main → pilih cheat dari 7 kategori → kombo tombol ke-inject otomatis.

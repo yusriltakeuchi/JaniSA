@@ -1,4 +1,4 @@
-// main.cpp — GTA SA Definitive Edition cheat overlay for Nintendo Switch (Atmosphere + Tesla)
+// main.cpp — JaniSA: GTA SA cheat overlay for Nintendo Switch (Atmosphere + Tesla)
 //
 // Build: devkitPro toolchain (switch-dev), Tesla-Template layout.
 //   #define TESLA_INIT_IMPL in exactly ONE translation unit.
@@ -160,7 +160,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         beginInputGuard();
         auto& cat = CATEGORIES[m_cat];
-        auto frame = new tsl::elm::OverlayFrame(cat.title, "GTA SA Cheats");
+        auto frame = new tsl::elm::OverlayFrame(cat.title, "JaniSA");
         auto list  = new tsl::elm::List();
         for (u32 i = 0; i < cat.count; i++) {
             auto item = new tsl::elm::ListItem(cat.items[i].name);
@@ -245,7 +245,7 @@ class GuiCategories : public GuardedGui {
 public:
     virtual tsl::elm::Element* createUI() override {
         beginInputGuard();
-        auto frame = new tsl::elm::OverlayFrame("GTA SA Cheats", "82 cheats");
+        auto frame = new tsl::elm::OverlayFrame("JaniSA", "by Jani \u00b7 82 cheats");
         auto list  = new tsl::elm::List();
 
         // Bundling entry at top of root menu

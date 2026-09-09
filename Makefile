@@ -10,8 +10,9 @@ TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
 
 #---------------------------------------------------------------------------------
-APP_TITLE		:=	GTA SA Cheats
-APP_VERSION		:=	1.0.0
+APP_TITLE		:=	JaniSA
+APP_AUTHOR		:=	Jani
+APP_VERSION		:=	0.1.0
 
 TARGET			:=	gta-cheats
 BUILD			:=	build
