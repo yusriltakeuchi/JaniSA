@@ -43,8 +43,7 @@ Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag
 - 🧠 **No combo memorization** — the overlay does the remembering
 - 🪶 **Lightweight** — the whole thing is a ~320 KB `.ovl`
 
-<details>
-<summary><b>📸 Preview — the overlay in action</b></summary>
+<b>📸 Preview — the overlay in action</b>
 
 | Main Menu | Player & Wanted | Combat & Peds |
 |-----------|----------------|---------------|
@@ -57,8 +56,6 @@ Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag
 | Weather | Other | Bundling | Bundle Detail |
 |---------|-------|----------|---------------|
 | ![Weather](screenshots/07-weather.jpg) | ![Other](screenshots/08-other.jpg) | ![Bundling](screenshots/09-bundling.jpg) | ![Bundle Detail](screenshots/10-bundle-detail.jpg) |
-
-</details>
 
 ---
 
