@@ -24,6 +24,14 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 ---
 
+### 📬 What's new
+
+Full changelog: **[CHANGELOG.md](CHANGELOG.md)**
+
+Latest release: **[v0.1.0](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.1.0)** — 82 cheats, bundling, auto-injection.
+
+---
+
 ## ✨ Highlights
 
 - 🎮 **82 official GTA SA DE cheats**, every single one from the Switch version
