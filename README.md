@@ -10,7 +10,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![Author](https://img.shields.io/badge/by-Jani-0088cc?style=for-the-badge)](https://github.com/yusriltakeuchi)
-[![Version](https://img.shields.io/badge/version-0.2.1-88c100?style=for-the-badge)]()
+|[![Version](https://img.shields.io/badge/version-0.2.2-88c100?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Cheats](https://img.shields.io/badge/cheats-82-orange?style=for-the-badge)]()
 [![Platform](https://img.shields.io/badge/platform-Switch_CFW-6a737d?style=for-the-badge)]()
@@ -28,7 +28,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 Full changelog: **[CHANGELOG.md](CHANGELOG.md)**
 
-Latest release: **[v0.2.1](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.1)** — custom bundles + **menu icons**. 🎛️▶️
+Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.2)** — SFX feedback, crash fix, auto-name bundles.
 
 ---
 
@@ -44,21 +44,18 @@ Latest release: **[v0.2.1](https://github.com/yusriltakeuchi/JaniSA/releases/tag
 <details>
 <summary><b>📸 Preview — the overlay in action</b></summary>
 
-```
-┌─────────────────────────────┐
-│  JaniSA                     │
-│  by Jani · 82 cheats        │
-├─────────────────────────────┤
-│  ▶ Bundling                 │  run several cheats at once
-│  ▶ Player & Wanted      [12]│
-│  ▶ Combat & Peds        [15]│
-│  ▶ Vehicles             [19]│
-│  ▶ Traffic & Driving    [16]│
-│  ▶ Time & Physics        [9]│
-│  ▶ Weather               [6]│
-│  ▶ Other                 [5]│
-└─────────────────────────────┘
-```
+| Main Menu | Player & Wanted | Combat & Peds |
+|-----------|----------------|---------------|
+| ![Main Menu](screenshots/01-main-menu.jpg) | ![Player & Wanted](screenshots/02-player-wanted.jpg) | ![Combat & Peds](screenshots/03-combat-peds.jpg) |
+
+| Vehicles | Traffic & Driving | Time & Physics |
+|----------|-------------------|----------------|
+| ![Vehicles](screenshots/04-vehicles.jpg) | ![Traffic & Driving](screenshots/05-traffic-driving.jpg) | ![Time & Physics](screenshots/06-time-physics.jpg) |
+
+| Weather | Other | Bundling | Bundle Detail |
+|---------|-------|----------|---------------|
+| ![Weather](screenshots/07-weather.jpg) | ![Other](screenshots/08-other.jpg) | ![Bundling](screenshots/09-bundling.jpg) | ![Bundle Detail](screenshots/10-bundle-detail.jpg) |
+
 </details>
 
 ---
