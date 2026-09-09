@@ -1,136 +1,130 @@
-# 🚗 JaniSA — GTA SA Cheat Overlay
+# 🚗 JaniSA — GTA San Andreas Cheat Overlay for Nintendo Switch
 
-**Author: Jani** · v0.1.0
+**JaniSA** is a Tesla overlay for **GTA San Andreas – Definitive Edition** on Nintendo Switch (Atmosphere CFW). Open the overlay mid-game, pick a cheat from one of 7 categories (or a multi-cheat bundle), and the button combo is injected **automatically** — no manual button mashing.
 
-Tesla overlay untuk **GTA San Andreas – Definitive Edition** di Nintendo Switch (Atmosphere CFW).
-Buka overlay pas lagi main → pilih cheat dari 7 kategori → kombo tombol ke-inject otomatis.
-
-> Dibangun dengan libtesla + libnx (devkitPro). Dites build di devkitA64 gcc 16.1.0.
+![Author](https://img.shields.io/badge/author-Jani-0088cc)
+![Version](https://img.shields.io/badge/version-0.1.0-88c100)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Cheats](https://img.shields.io/badge/cheats-82-orange)
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
-- [Fitur](#fitur)
-- [Cara Aktifin di Switch](#cara-aktifin-di-switch)
-- [Tombol Navigasi](#tombol-navigasi)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Controls](#controls)
 - [Bundling (Multi-Cheat)](#bundling-multi-cheat)
-- [Daftar Cheat Lengkap](#daftar-cheat-lengkap)
-- [Cara Build dari Source](#cara-build-dari-source)
-- [Cara Tambah Cheat / Bundle Baru](#cara-tambah-cheat--bundle-baru)
+- [Cheat List](#cheat-list)
+- [Building from Source](#building-from-source)
+- [Adding Cheats / Bundles](#adding-cheats--bundles)
 - [Troubleshooting](#troubleshooting)
-- [Lisensi](#lisensi)
+- [FAQ](#faq)
+- [License](#license)
 
 ---
 
-## Fitur
+## Features
 
-- **82 cheat** resmi GTA SA DE (data dari IGN wiki, versi tombol Switch)
-- 7 kategori biar gampang dicari: **Player & Wanted**, **Combat & Peds**, **Vehicles**, **Traffic & Driving**, **Time & Physics**, **Weather**, **Other**
-- **Bundling** — jalanin beberapa cheat sekaligus berurutan (misal money + armor + weapon)
-- Kombo tombol ke-inject **otomatis** (frame-accurate) — gak perlu pencet manual
-- Background hitam semi-transparan
-- Kecil: `.ovl` cuma **~310 KB**
+- 🎮 **82 official GTA SA DE cheats** (from the IGN Switch list)
+- 🗂️ **7 categories** for quick lookup: **Player & Wanted**, **Combat & Peds**, **Vehicles**, **Traffic & Driving**, **Time & Physics**, **Weather**, **Other**
+- 📦 **Bundling** — run several cheats back-to-back in one confirmation (e.g. money + armor + weapons)
+- ⚡ **Automatic combo injection** — no need to press anything manually
+- 🖥️ Semi-transparent dark background
+- 📦 Small: `.ovl` is only **~320 KB**
 
 ---
 
-## Cara Aktifin di Switch
+## Installation
 
-### 1. Prasyarat
+### Prerequisites
 
-Switch lo harus udah pakai CFW **Atmosphere** + **Tesla**:
+Your Switch must run custom firmware **Atmosphere** with **Tesla** installed:
 
-| Komponen | Link | Catatan |
-|----------|------|---------|
+| Component | Link | Notes |
+|-----------|------|-------|
 | **Atmosphere** | [Atmosphere-NX/Atmosphere](https://github.com/Atmosphere-NX/Atmosphere) | 1.7.0+ |
 | **Tesla-Menu** | [WerWolv/Tesla-Menu](https://github.com/WerWolv/Tesla-Menu) | Overlay loader |
-| **nx-ovlloader** | [Atmosphere-NX/nx-ovlloader](https://github.com/Atmosphere-NX/nx-ovlloader) | Loader overlay di Tesla |
+| **nx-ovlloader** | [Atmosphere-NX/nx-ovlloader](https://github.com/Atmosphere-NX/nx-ovlloader) | Loads overlays at boot |
 
-Kalau Tesla belom terpasang: install dulu lewat
-[The Ultimate AIO Switch Updater](https://github.com/HamletDuFromage/aio-switch-updater)
-atau setup manual.
+If Tesla isn't installed yet, install it via [The Ultimate AIO Switch Updater](https://github.com/HamletDuFromage/aio-switch-updater) or a manual setup.
 
-### 2. Pasang overlay
+### Install the overlay
 
-1. Colok **SD card** ke komputer
-2. Copy file **`gta-cheats.ovl`** ke:
+1. Put your **SD card** into your computer.
+2. Copy **`gta-cheats.ovl`** to:
    ```
    /atmosphere/overlays/gta-cheats.ovl
    ```
-   > Path lengkap di SD: `sdmc:/atmosphere/overlays/gta-cheats.ovl`
-   > (folder `overlays` biasanya udah ada — kalau belum, bikin sendiri)
-3. Eject SD dengan aman → masukin balik ke Switch
+   > Full SD path: `sdmc:/atmosphere/overlays/gta-cheats.ovl` (the `overlays` folder usually already exists — create it if not).
+3. Eject the SD card safely and put it back into the Switch.
 
-### 3. Aktifkan dan pakai
+### Enable and use
 
-1. Nyalakan Switch (masuk ke Atmosphere)
-2. Buka game **GTA San Andreas – Definitive Edition**
-3. Tekan dan tahan kombo buka Tesla:
-   - **`L` + `DPAD-DOWN`** (default Tesla) — atau kombo yang lo set di Tesla
-4. Menu Tesla muncul → pilih **GTA Cheats**
-5. Pilih **kategori** (misal *Weapons* atau *Player & Wanted*)
-6. Pilih **cheat** → kombo tombol ke-inject otomatis, cheat langsung aktif
-7. **Bundling** (opsional): pilih *Bundling* di menu utama → pilih bundle → liat list cheat-nya → **Confirm ▶** → semua cheat di bundle ke-inject berurutan
-8. Tekan **`B`** buat tutup menu (atau kombo Tesla lagi)
+1. Power on the Switch into Atmosphere.
+2. Start **GTA San Andreas – Definitive Edition**.
+3. Press and hold the Tesla open combo:
+   - **`L` + `DPAD-DOWN`** (default) — or the combo you configured in Tesla.
+4. The Tesla menu opens → select **GTA Cheats**.
+5. Pick a **category** (e.g. *Weapons* or *Player & Wanted*).
+6. Pick a **cheat** → the button combo is injected automatically, cheat activates.
+7. **Bundling** (optional): pick *Bundling* from the main menu → pick a bundle → review the cheat list → press **Confirm ▶** → all cheats in the bundle are injected in sequence.
+8. Press **`B`** to close the menu (or trigger the Tesla combo again).
 
-> **Catatan penting:** Injection pakai service `hid:dbg`. Pada beberapa setup Atmosphere
-> applet overlay gak dapat akses service ini. Kalau cheat gak ke-inject (game gak ngerespon),
-> itu tandanya butuh fallback sysmodule — lihat [Troubleshooting](#troubleshooting).
+> **Important:** Injection uses the `hid:dbg` service. On some Atmosphere setups the applet overlay cannot access this service. If cheats don't inject (game doesn't respond), you need the fallback sysmodule — see [Troubleshooting](#troubleshooting).
 
 ---
 
-## Tombol Navigasi
+## Controls
 
-| Tombol      | Aksi                               |
-|-------------|------------------------------------|
-| `D-pad ↑/↓` | Pindah pilihan                     |
-| `A`         | Pilih cheat / kategori / Confirm   |
-| `B`         | Balik ke layar sebelumnya          |
-| `L + DPAD-DOWN` | Buka menu Tesla (default)      |
-| `L + DPAD-DOWN` | Tutup menu pas lagi di overlay |
+| Button | Action |
+|--------|--------|
+| `D-pad ↑/↓` | Move selection |
+| `A` | Select cheat / category / Confirm |
+| `B` | Go back to previous screen |
+| `L + DPAD-DOWN` | Open Tesla menu (default) |
+| `L + DPAD-DOWN` | Close menu while in overlay |
 
-> Overlay ini gak ganti kombo Tesla — kombo buka/tutup tetap dikontrol Tesla-Menu
-> (default `L+DDOWN`, bisa diubah di pengaturan Tesla).
+> This overlay does **not** change your Tesla combo — open/close is always controlled by Tesla-Menu (default `L+DDOWN`, changeable in Tesla settings).
 
 ---
 
 ## Bundling (Multi-Cheat)
 
-Bundling jalanin **beberapa cheat sekaligus berurutan** dari satu konfirmasi —
-gak perlu pilih cheat satu-satu.
+Bundling runs **several cheats in sequence from a single confirmation** — no need to select cheats one by one.
 
-### Cara pakai
+### How to use
 
-1. Buka overlay → pilih **Bundling** (item paling atas di menu utama)
-2. Pilih salah satu bundle:
-   - **Bundling A** — Money & Health
-   - **Bundling B** — Weapons Pack
-   - **Bundling C** — Wanted Control
-   - **Bundling D** — Traffic Mayhem
-3. Muncul list cheat yang bakal dijalanin (read-only, buat preview aja)
-4. Pilih **Confirm ▶** → semua cheat di bundle ke-inject berurutan, otomatis
+1. Open the overlay → select **Bundling** (top item in the main menu).
+2. Pick a bundle:
+   - **A — Money & Health**
+   - **B — Weapons Pack**
+   - **C — Wanted Control**
+   - **D — Traffic Mayhem**
+3. A read-only list of the cheats that will be run is shown (preview).
+4. Select **Confirm ▶** → all cheats in the bundle are injected back-to-back, automatically.
 
-### Isi tiap bundle
+### Bundle contents
 
-| Bundle | Cheat yang dijalanin |
-|--------|----------------------|
+| Bundle | Cheats |
+|--------|--------|
 | **A — Money & Health** | `Health, Armor, and Money ($250,000)`, `Max Muscle`, `Max Fat` |
 | **B — Weapons Pack** | `Weapons 1`, `Weapons 2`, `Weapons 3`, `Infinite Ammo` |
 | **C — Wanted Control** | `Wanted Level Down`, `Lock Wanted Level` |
 | **D — Traffic Mayhem** | `Spawn Rhino Tank`, `Spawn Hydra`, `Blow Up All Cars`, `Aggressive Traffic` |
 
-> Bundle jalan berurutan sesuai urutan di atas (bukan paralel). Injector nunggu
-> tiap cheat kelar (kombo selesai) baru lanjut ke cheat berikutnya.
+> Bundles run **sequentially** in the order above (not in parallel). The injector waits for each cheat to finish (combo complete) before starting the next one.
 
 ---
 
-## Daftar Cheat Lengkap
+## Cheat List
 
-82 cheat dalam 7 kategori. Kombo di bawah persis dari `source/gta_cheats_data.hpp`.
+82 cheats across 7 categories. Combos below are exactly as defined in `source/gta_cheats_data.hpp`.
 
 ### Player & Wanted (12)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Health, Armor, and Money ($250,000) | `R ZR L B ← ↓ → ↑ ← ↓ → ↑` |
 | 2 | Wanted Level Down | `R R A ZR ↑ ↓ ↑ ↓ ↑ ↓` |
@@ -147,7 +141,7 @@ gak perlu pilih cheat satu-satu.
 
 ### Combat & Peds (15)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Infinite Ammo | `L R Y R ← ZR R ← Y ↓ L L` |
 | 2 | Weapons 1 | `R ZR L ZR ← ↓ → ↑ ← ↓ → ↑` |
@@ -165,14 +159,14 @@ gak perlu pilih cheat satu-satu.
 | 14 | Gang Members Mode | `← → → → ← B ↓ ↑ Y → ↓` |
 | 15 | Recruit Anyone (Rocket Launcher) | `ZR ZR ZR B ZL L R ZL ↓ B` |
 
-> Nama lengkap Weapons 1/2/3:
+> Full weapon names:
 > - **Weapons 1**: Bat, Pistol, Shotgun, Mini SMG, AK 47, Rocket Launcher, Molotov Cocktail, Spray Can, Brass Knuckles.
 > - **Weapons 2**: Knife, Pistol, Sawed-Off Shotgun, Tec 9, Sniper Rifle, Flamethrower, Grenades, Fire Extinguisher.
 > - **Weapons 3**: Chainsaw, Silenced Pistol, Combat Shotgun, M4, Bazooka, Plastic Explosive
 
 ### Vehicles (19)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Spawn Rhino Tank | `A A L A A A L ZL R X A X` |
 | 2 | Spawn Jetpack | `L ZL R ZR ↑ ↓ ← → L ZL R ZR ↑ ↓ ← →` |
@@ -196,7 +190,7 @@ gak perlu pilih cheat satu-satu.
 
 ### Traffic & Driving (16)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Blow Up All Cars | `ZR ZL R L ZL ZR Y X A X ZL L` |
 | 2 | Traffic Lights Stay Green | `→ R ↑ ZL ZL ← R L R R` |
@@ -217,7 +211,7 @@ gak perlu pilih cheat satu-satu.
 
 ### Time & Physics (9)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Mega Jump | `↑ ↑ X X ↑ ↑ ← → Y ZR ZR` |
 | 2 | Always 21:00 | `← ← ZL R → Y Y L ZL B` |
@@ -231,7 +225,7 @@ gak perlu pilih cheat satu-satu.
 
 ### Weather (6)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Cloudy Weather | `ZL ↓ ↓ ← Y ← ZR Y B R L L` |
 | 2 | Foggy Weather | `ZR B L L ZL ZL ZL B` |
@@ -242,7 +236,7 @@ gak perlu pilih cheat satu-satu.
 
 ### Other (5)
 
-| # | Cheat | Kombo |
+| # | Cheat | Combo |
 |---|-------|-------|
 | 1 | Beach Party Mode | `↑ ↑ ↓ ↓ Y A L R X ↓` |
 | 2 | Funhouse Theme | `X X L Y Y A Y ↓ A` |
@@ -252,123 +246,133 @@ gak perlu pilih cheat satu-satu.
 
 ---
 
-## Cara Build dari Source
+## Building from Source
 
-### Prasyarat
+### Prerequisites
 
-- **devkitPro** (devkitA64 + libnx 4.x) — cara install: https://devkitpro.org/wiki/Getting_Started
-- libtesla (udah ke-track di `libs/` — repo ini self-contained, gak butuh submodule update)
+- **devkitPro** (devkitA64 + libnx 4.x) — install guide: https://devkitpro.org/wiki/Getting_Started
+- libtesla is vendored in `libs/` — the repo is self-contained, no submodule update needed.
 
 ### Build
 
 ```bash
-export DEVKITPRO=/opt/devkitpro   # atau lokasi devkitPro lo
+export DEVKITPRO=/opt/devkitpro   # or wherever devkitPro lives
 export PATH=$DEVKITPRO/tools/bin:$PATH
 
 cd GTA-Switch-Cheat-Overlay
 make clean && make
 ```
 
-Hasil: `gta-cheats.ovl` di root project.
+The output `gta-cheats.ovl` lands in **`build/`**.
 
-> Kalau `make` error `nacptool: command not found`, pastikan `$DEVKITPRO/tools/bin`
-> ada di PATH (tools dari package `switch-tools`).
+> If `make` errors with `nacptool: command not found`, make sure `$DEVKITPRO/tools/bin` is on your PATH (tools come from the `switch-tools` package).
 
-### Struktur project
+### Project structure
 
 ```
 GTA-Switch-Cheat-Overlay/
 ├── source/
 │   ├── main.cpp              — overlay UI + injector (hid:dbg)
-│   ├── gta_cheats_data.hpp   — 82 cheat & kombo (auto-generated, jangan diedit manual)
-│   └── gta_bundles_data.hpp  — definisi bundle multi-cheat
-├── libs/libtesla/            — framework overlay (ke-track langsung di repo)
+│   ├── gta_cheats_data.hpp   — 82 cheats & combos (auto-generated, do not edit by hand)
+│   └── gta_bundles_data.hpp  — multi-cheat bundle definitions
+├── libs/libtesla/            — overlay framework (vendored in-repo)
 ├── Makefile
-├── gta-cheats.ovl            — hasil build (deployable)
+├── LICENSE
 └── README.md
 ```
 
+> `build/` is generated — the deployable `.ovl` lives there after `make`.
+
 ---
 
-## Cara Tambah Cheat / Bundle Baru
+## Adding Cheats / Bundles
 
-### Tambah cheat baru
+### Add a new cheat
 
-Cheat harus ditambah ke **`source/gta_cheats_data.hpp`**:
+Add it to **`source/gta_cheats_data.hpp`**:
 
 ```cpp
-// 1. definisikan kombo (baru, di bagian atas file):
+// 1. define the combo (new, at the top of the file):
 static const u64 CB_Player__Wanted_99[] = { HidNpadButton_A, HidNpadButton_B, HidNpadButton_X, 0 };
 
-// 2. daftarkan di kategori:
+// 2. register it in the category:
 static const CheatEntry CHEATS_Player__Wanted[] = {
-    { "Nama Cheat", CB_Player__Wanted_99, 3 },
-    // ... sisanya
+    { "Cheat Name", CB_Player__Wanted_99, 3 },
+    // ... rest
 };
 ```
 
-### Tambah bundle baru
+### Add a new bundle
 
 Edit **`source/gta_bundles_data.hpp`**:
 
 ```cpp
-// 1. bikin array nama cheat (harus persis nama di gta_cheats_data.hpp):
+// 1. create a cheat-name array (must exactly match names in gta_cheats_data.hpp):
 static const char* const BUNDLE_E_NAMES[] = {
     "Health, Armor, and Money ($250,000)",
     "Spawn Hydra",
 };
 
-// 2. daftarkan di BUNDLES[]:
+// 2. register it in BUNDLES[]:
 static const BundleDef BUNDLES[] = {
     { "Bundling E", "Title Desc", BUNDLE_E_NAMES, sizeof(BUNDLE_E_NAMES)/sizeof(BUNDLE_E_NAMES[0]) },
     // ...
 };
 ```
 
-> Kalau nama cheat salah ketik, bundle tetap jalan — cheat yang gak ketemu
-> bakal di-skip otomatis (gak nge-crash).
+> If a bundle cheat name is mistyped, the bundle still runs — the missing cheat is skipped automatically (no crash).
 
 ---
 
 ## Troubleshooting
 
-### Overlay kagak muncul pas tombol kombo ditekan
+### Overlay doesn't appear when pressing the combo
 
-- Pastikan Tesla terinstall & overlay terdaftar di menu Tesla
-- Pastikan file `.ovl` ada di `/atmosphere/overlays/`
-- Pastikan kombo Tesla gak bentrok sama kombo lain (ubah di pengaturan Tesla)
-- Coba kombo lain (misal `L+DPAD-DOWN` default, atau set ulang di Tesla)
+- Make sure Tesla is installed and the overlay is registered in the Tesla menu.
+- Make sure the `.ovl` file is in `/atmosphere/overlays/`.
+- Make sure your Tesla combo doesn't conflict with another combo (change it in Tesla settings).
+- Try another combo (e.g. the default `L+DPAD-DOWN`, or re-set in Tesla).
 
-### Overlay muncul tapi cheat gak ke-inject
+### Overlay appears but cheats don't inject
 
-- Ini kemungkinan besar **`hid:dbg` di-block** di konteks applet. Solusi: pakai
-  **sysmodule companion** (hid-mitm / virtual pad) sebagai pengganti.
-- Cek juga: beberapa cheat GTA SA DE cuma butuh tombol **satu kali** — kalau kombo
-  ke-inject sebelum game "siap nerima", inject ulang bisa nepak. Tunggu sebentar,
-  pilih cheat yang sama lagi.
+- This is most likely **`hid:dbg` blocked** in the applet context. Solution: use a **sysmodule companion** (hid-mitm / virtual pad) as a replacement.
+- Also note: some GTA SA DE cheats only need the button press **once** — if the combo is injected before the game is "ready", re-inject. Wait a moment, select the same cheat again.
 
-### Bundling: cheat ke-2 ke-swallow game
+### Bundling: the 2nd cheat is swallowed by the game
 
-- Kombo berurutan mungkin butuh jeda antar cheat (~0.2–1 s). Kalau cheat berikutnya
-  gak aktif, tambah `BETWEEN_FRAMES` di `source/main.cpp` (Injector) — konstanta
-  jeda di antara dua cheat. Rebuild. Default 0 (langsung lanjut); mulai dari 30
-  (~0.5 s @60fps) dan tuning.
+- Sequential combos may need a delay between cheats (~0.2–1 s). If the next cheat doesn't activate, increase `BETWEEN_CHEATS_NS` in `source/main.cpp` (Injector) — the inter-cheat delay constant. Rebuild. Default is 400 ms.
 
-### Game nge-freeze / stutter pas pilih cheat
+### Game freezes / stutters when selecting a cheat
 
-- Kurangi `HOLD_FRAMES` di `source/main.cpp` (default 2) — makin kecil makin cepat
-  kombo jalan. Rebuild.
+- Reduce `HOLD_NS` in `source/main.cpp` (default 60 ms) — smaller = faster combo playback. Rebuild.
 
-### Mau ganti warna / tampilan
+### Want to change the look
 
-- Background hitam semi-transparan = `ColorFrameBackground` bawaan libtesla.
-  Ubah alpha di `tsl::style` kalau mau lebih transparan/gelap.
+- Semi-transparent black background = libtesla's default `ColorFrameBackground`. Change the alpha in `tsl::style` if you want it more transparent / darker.
 
 ---
 
-## Lisensi
+## FAQ
 
-MIT. Terinspirasi dari Tesla-Template (WerWolv) & libtesla (WerWolv).
+**Q: Will this get my Switch banned?**
+A: Homebrew / CFW always carries some risk, especially if you go online. Use at your own risk, like any CFW homebrew. This overlay itself only reads your controller input — it does not touch system NAND or online services.
 
-GTA San Andreas © Rockstar Games. Overlay ini cuma tools input — bukan contain
-konten game, gak ada aset game di dalamnya.
+**Q: Is this a mod / does it include game assets?**
+A: No. It's an input tool — it presses buttons for you. No game assets, no file replacement, no memory patches.
+
+**Q: Does it work on emulators (Yuzu / Ryujinx)?**
+A: Not directly. It relies on Tesla + `hid:dbg`, which are Switch hardware/Atmosphere features. On emulators you're better off just typing cheats manually or using emulator-native cheat systems.
+
+**Q: Does it work in GTA SA for other platforms (PC / mobile)?**
+A: No — the combos in the data are the **Switch** button layout of GTA SA Definitive Edition.
+
+**Q: Can I use this while playing online?**
+A: GTA SA DE has no multiplayer. Single-player only — no online risk from the cheats themselves.
+
+---
+
+## License
+
+MIT. Inspired by Tesla-Template (WerWolv) and libtesla (WerWolv).
+
+GTA San Andreas © Rockstar Games. This overlay is an input tool — it does not contain or extract any game content or assets.
