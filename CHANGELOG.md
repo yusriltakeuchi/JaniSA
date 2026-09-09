@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this
 
 ---
 
+## [0.2.1] — 2026-09-09
+
+### Added
+- **Menu icons** — `▶` icon prefix on all menu items (categories, bundling, custom bundle, edit). Renders via Nintendo extended font (std font fallback), no extra dependencies.
+
+### Fixed
+- None
+
+---
+
 ## [0.2.0] — 2026-09-09
 
 ### Added

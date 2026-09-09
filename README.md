@@ -10,7 +10,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![Author](https://img.shields.io/badge/by-Jani-0088cc?style=for-the-badge)](https://github.com/yusriltakeuchi)
-[![Version](https://img.shields.io/badge/version-0.2.0-88c100?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/version-0.2.1-88c100?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Cheats](https://img.shields.io/badge/cheats-82-orange?style=for-the-badge)]()
 [![Platform](https://img.shields.io/badge/platform-Switch_CFW-6a737d?style=for-the-badge)]()
