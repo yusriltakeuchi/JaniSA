@@ -12,7 +12,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![Author](https://img.shields.io/badge/by-Jani-0088cc?style=for-the-badge)](https://github.com/yusriltakeuchi)
-|[![Version](https://img.shields.io/badge/version-0.2.2-88c100?style=for-the-badge)]()
+|[![Version](https://img.shields.io/badge/version-0.2.3-88c100?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Cheats](https://img.shields.io/badge/cheats-82-orange?style=for-the-badge)]()
 [![Platform](https://img.shields.io/badge/platform-Switch_CFW-6a737d?style=for-the-badge)]()
@@ -30,7 +30,7 @@ JaniSA is a [Tesla](https://github.com/WerWolv/Tesla-Menu) overlay for **GTA San
 
 Full changelog: **[CHANGELOG.md](CHANGELOG.md)**
 
-Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.2)** — SFX feedback, crash fix, auto-name bundles.
+Latest release: **[v0.2.3](https://github.com/yusriltakeuchi/JaniSA/releases/tag/v0.2.3)** — fix custom bundle persistence, auto-name collision fix.
 
 ---
 
@@ -41,7 +41,7 @@ Latest release: **[v0.2.2](https://github.com/yusriltakeuchi/JaniSA/releases/tag
 - 📦 **Bundling** — run several cheats back-to-back with a single Confirm
 - ⚡ **Automatic injection** — combos are played for you, frame-right
 - 🧠 **No combo memorization** — the overlay does the remembering
-- 🪶 **Lightweight** — the whole thing is a ~320 KB `.ovl`
+- 🪶 **Lightweight** — the whole thing is a ~380 KB `.ovl`
 
 <b>📸 Preview — the overlay in action</b>
 
@@ -136,11 +136,11 @@ Run **several cheats in sequence** from a single confirmation — perfect for lo
 
 ### 🎛️ Build your own bundle
 
-1. In the Bundling menu, select **Edit Custom Bundle**.
-2. Scroll the full list of 82 cheats — press **A** to toggle each one in/out (up to 16).
-3. Select **Save Bundle ▶** → your selection is stored to `/config/JaniSA/JaniSA.ini` on the SD card.
-4. A **Custom** entry now appears in the Bundling list — confirm it to run all your chosen cheats.
-5. It survives reboots. Edit anytime to change it.
+1. In the Bundling menu, select **Custom Bundle**.
+2. **Create Bundle** — auto-names "Custom N", opens the editor with the full 82-cheat checklist.
+3. Toggle cheats **A** on/off (up to 16) → **Apply** to save.
+4. **Hapus** to delete a bundle you don't need.
+5. Saved to `sdmc:/config/JaniSA/JaniSA.ini` — survives Tesla close and Switch reboot.
 
 ---
 
