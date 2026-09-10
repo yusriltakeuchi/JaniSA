@@ -520,9 +520,15 @@ public:
         create->setValue("+");
         create->setClickListener([](u64 keys){
             if (!(keys & HidNpadButton_A)) return false;
-            // Auto-name: Custom 1, Custom 2, ...
+            // Auto-name: Custom <max+1> so deleted names never collide
+            size_t nextIdx = gCustomBundles.size() + 1;
+            for (const auto& b : gCustomBundles) {
+                size_t n = 0;
+                if (sscanf(b.title.c_str(), "Custom %zu", &n) == 1 && n >= nextIdx)
+                    nextIdx = n + 1;
+            }
             char nameBuf[32];
-            snprintf(nameBuf, sizeof nameBuf, "Custom %zu", gCustomBundles.size() + 1);
+            snprintf(nameBuf, sizeof nameBuf, "Custom %zu", nextIdx);
             janisaConfig::CustomBundleDef nb;
             nb.title = nameBuf;
             nb.cheats.clear();

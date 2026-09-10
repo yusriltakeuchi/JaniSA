@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this
 
 ---
 
+## [0.2.3] — 2026-09-09
+
+### Fixed
+- **Custom bundles not persisting** — `saveBundles()` now resizes the config file with `fsFileSetSize()` before writing and commits the filesystem with `fsFsCommit()`. Previously, `fsFileWrite()` was bounded by the existing file size, so new or growing config data was silently truncated or lost. Bundle data now survives Tesla overlay close and Switch reboot.
+- **Auto-name collision after delete** — Create Bundle now computes the next unused "Custom N" number by scanning existing names, instead of using `size()+1` which could collide after deleting a bundle.
+
+---
+
 ## [0.2.2] — 2026-09-09
 
 ### Added

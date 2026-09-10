@@ -12,7 +12,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE		:=	JaniSA
 APP_AUTHOR		:=	Jani
-APP_VERSION		:=	0.2.2
+APP_VERSION		:=	0.2.3
 
 TARGET			:=	JaniSA
 BUILD			:=	build

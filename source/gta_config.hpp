@@ -97,7 +97,11 @@ static inline bool saveBundles(const std::vector<CustomBundleDef>& bundles) {
         out += "["; out += b.title; out += "]\n";
         for (const auto& c : b.cheats) { out += c; out += "\n"; }
     }
-    Result rc = fsFileWrite(&f, 0, out.data(), out.size(), FsWriteOption_Flush);
+    Result rc = fsFileSetSize(&f, (s64)out.size());
+    if (R_SUCCEEDED(rc) && !out.empty())
+        rc = fsFileWrite(&f, 0, out.data(), out.size(), FsWriteOption_Flush);
+    if (R_SUCCEEDED(rc))
+        rc = fsFsCommit(&fs);
     return R_SUCCEEDED(rc);
 }
 
